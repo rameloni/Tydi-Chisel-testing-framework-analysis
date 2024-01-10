@@ -1,3 +1,7 @@
+.idea/
+.vscode/
+.metal/
+
 *.class
 *.log
 
