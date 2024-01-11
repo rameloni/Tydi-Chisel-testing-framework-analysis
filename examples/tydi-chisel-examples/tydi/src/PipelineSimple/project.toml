@@ -1,0 +1,12 @@
+output_path = "./build"
+
+[properties]
+name = "PipelineSimple"
+top_level_implementation = "PipelineSimple"
+top_level_implementation_package = "pipelineSimple"
+
+[files]
+tydi_src = [
+    "pipelineSimple.td",
+    "pipelineSimple_types.td",
+]

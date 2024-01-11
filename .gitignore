@@ -6,7 +6,7 @@
 /test/files/lib/*.jar
 /test/files/speclib/instrumented.jar
 /tools/*.jar
-
+.scala-build/
 # Developer specific properties
 /build.properties
 /buildcharacter.properties
@@ -19,7 +19,6 @@
 
 # other
 /out/
-/bin/
 /sandbox/
 
 # intellij

@@ -1,0 +1,9 @@
+output_path = "./build"
+
+[properties]
+name = "HelloWorldRgb"
+top_level_implementation = "helloworld_rgb"
+top_level_implementation_package = "main"
+
+[files]
+tydi_src = ["main.td"]
