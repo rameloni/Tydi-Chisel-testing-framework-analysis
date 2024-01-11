@@ -39,10 +39,8 @@ Group Float<n_mantissa: int, n_exponent: int> {
 
 #A position with an x and y coordinated#
 Group Pos {
-  // Create an alias
-  myFloat = Float<23, 8>;
-  x: myFloat;
-  y: myFloat;
+  x: Float<23, 8>;
+  y: Float<23, 8>;
 }
 
 #A Pixel with a position (x, y) and a color (rg) documentation#
