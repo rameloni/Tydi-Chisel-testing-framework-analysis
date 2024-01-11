@@ -1,0 +1,14 @@
+output_path = "./build"
+
+[properties]
+name = "PipelineNestedStream"
+top_level_implementation = "PipelineNestedStream"
+top_level_implementation_package = "pipelineNestedStream"
+
+[files]
+tydi_src = [
+    "pipelineNestedStream.td",
+    "pipelineNestedStream_types.td",
+    "../PipelineNestedGroup/nested_group_types.td",
+    "../PipelineSimple/pipelineSimple_types.td",
+]
