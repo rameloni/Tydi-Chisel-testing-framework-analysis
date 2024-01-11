@@ -1,0 +1,9 @@
+output_path = "./build"
+
+[properties]
+name = "PixelConverter"
+top_level_implementation = "pixel_converter"
+top_level_implementation_package = "main"
+
+[files]
+tydi_src = ["main.td"]

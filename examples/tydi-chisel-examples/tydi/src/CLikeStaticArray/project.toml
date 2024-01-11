@@ -1,0 +1,9 @@
+output_path = "./build"
+
+[properties]
+name = "CLikeStaticArray"
+top_level_implementation = "array_doubler"
+top_level_implementation_package = "main"
+
+[files]
+tydi_src = ["main.td"]

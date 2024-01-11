@@ -18,6 +18,8 @@ The `tydi-chisel-examples` is organized as follows:
 
 All the examples are related each other and they have an increasing complexity.
 - [`HelloWorldRgb`](./tydi/src/HelloWorldRgb/): A simple example that instantiates two streams of group `Rgb`. It is one of the simplest examples that can be used. It simply connects inputs to outputs.
+- [`PixelConverter`](./tydi/src/PixelConverter/): It extends the `HelloWorldRgb` example by adding more complex data structures that uses `Unions` (similar to `enum`s) and `Groups` (similar to `struct`s). It implements a color scale converter from rgb to grayscale and viceversa, depending on what type is the input stream since can be either rgb or gray. Moreover, it shows how to use tydi-lang templates to define custom and reusable types.
+- [`CLikeStaticArray`](./tydi/src/CLikeStaticArray/): It shows how to use advanced tydi-lang features such as the usage of for loops to instantiate fields in groups/unions/streamlets.
 - [`PipelineSimple`](./tydi/src/PipelineSimple/): A simple streaming pipeline that implements the following simple spark code, where the input is a stream of integers with timestamps attached (`{time: unsigned Integer, value: Integer}`):
   ```scala
   // Input stream: {timestamp, value}

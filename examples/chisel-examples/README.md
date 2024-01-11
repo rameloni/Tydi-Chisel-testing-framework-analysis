@@ -39,5 +39,5 @@ It also shows how this aspect relates to the Chisel source code.
 > [results](/results) directory.
 
 # References
-- [Chisel](https://www.chisel-lang.org/)
-- [`chisel-tutorial` examples](https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples)
+- [Chisel](https://www.chisel-lang.org/). The official Chisel website.
+- [`chisel-tutorial`](https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples) examples. The official Chisel tutorial examples main page.
