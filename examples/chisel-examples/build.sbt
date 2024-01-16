@@ -1,6 +1,6 @@
-val chiselVersion = "5.1.0"
-val chiselTestVersion = "0.6.0"
-
+val chiselVersion = "5.0.0"
+//val chiselTestVersion = "5.1-SNAPSHOT"
+val chiselTestVersion = "5.0.0"
 Compile / scalaSource := baseDirectory.value / "src/main"
 
 Test / scalaSource := baseDirectory.value / "src/chiseltest"
@@ -13,7 +13,7 @@ ThisBuild / scalaVersion := "2.13.10"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "testing-framework-analysis",
+    name := "Tydi-Chisel-testing-framework-analysis: Chisel-examples",
     addCompilerPlugin(
       "org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full
     ),

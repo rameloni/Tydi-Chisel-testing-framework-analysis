@@ -18,20 +18,23 @@ package adder
 
 import chisel3._
 import circt.stage.ChiselStage
+
 // import chisel3.experimental.{ChiselAnnotation, annotate}
 // import firrtl2.annotations.Annotation
 // import firrtl2.passes.wiring.SinkAnnotation
 // import firrtl2.annotations.{CircuitName, ComponentName, ModuleName, Named}
 // import firrtl2.transforms.SortModules
 
-//A n-bit adder with carry in and carry out
-class Adder(val n: Int, print: Boolean = false) extends Module {
+// A n-bit adder with carry in and carry out
+class Adder(val n: Int, val print: Boolean = false) extends Module {
+  // IO interface
   val io = IO(new Bundle {
     val A = Input(UInt(n.W))
     val B = Input(UInt(n.W))
     val Cin = Input(UInt(1.W))
+    
     val Sum = Output(UInt(n.W))
-    val Cout = Output(UInt(1.W))
+    val Cout = Output(Bool())
   })
   // val named =
   //   ComponentName(io.A.name, ModuleName(this.name, CircuitName("TopCircuitCustomName")))
@@ -40,27 +43,29 @@ class Adder(val n: Int, print: Boolean = false) extends Module {
   //  NOTE: Since we do all the wiring during elaboration and not at run-time,
   //  i.e., we don't need to dynamically index into the data structure at run-time,
   //  we use an Array instead of a Vec.
-  val FAs = Array.fill(n)(Module(new FullAdder()).io)
+  // Internal logic
+  val FAs = Array.fill(n)(Module(new FullAdder()))
   val carry = Wire(Vec(n + 1, UInt(1.W)))
   val sum = Wire(Vec(n, Bool()))
 
   // first carry is the top level carry in
-  carry(0) := io.Cin
+   carry(0) := io.Cin
 
   // wire up the ports of the full adders
   for (i <- 0 until n) {
-    FAs(i).a := io.A(i)
-    FAs(i).b := io.B(i)
-    FAs(i).cin := carry(i)
-    carry(i + 1) := FAs(i).cout
-    sum(i) := FAs(i).sum.asBool
+    FAs(i).io.a := io.A(i)
+    FAs(i).io.b := io.B(i)
+    FAs(i).io.cin := carry(i)
+    carry(i + 1) := FAs(i).io.cout
+    sum(i) := FAs(i).io.sum.asBool
   }
+
   io.Sum := sum.asUInt
   io.Cout := carry(n)
 
   // For debugging purposes
   if (print) {
-    println(
+    System.out.println(
       s"Adder: ${n} ${io.A.name} ${io.B.name} ${io.Cin.name} ${io.Sum.name} ${io.Cout.name}"
     )
   }

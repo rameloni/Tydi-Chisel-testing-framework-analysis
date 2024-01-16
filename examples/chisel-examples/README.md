@@ -1,12 +1,13 @@
 # Chisel examples
 This directory contains a variety of Chisel code examples. 
-A selection of these examples has been meticulously chosen from the [`chisel-tutorial`] repository and subsequently adapted for an analysis of framework characteristics. 
+A selection of these examples has been meticulously chosen from the `chisel-tutorial` repository and subsequently 
+adapted for an analysis of each testing framework characteristics. 
 The primary objective of these modifications is to highlight certain characteristics of Chisel representations that 
-might remain obscured when utilizing testing frameworks.
+might remain obscured while using the available testing frameworks.
 
 Specifically, the following examples have been selected:
-- [`Adder`](./src/main/Adder.scala): A simple N-bit adder circuit, that uses `Array` (scala) and `Vec` (chisel) classes to wrap the 
-    [`FullAdder`](./src/main/FullAdder.scala)s modules and the bit "vectors" needed for the internal `carry` and `sum`.
+- [`Adder`](./src/main/Adder.scala): A simple N-bit adder circuit, that uses `Array` (scala) class to wrap the 
+    [`FullAdder`](./src/main/FullAdder.scala)s modules, `Vec` and `Bundle` (chisel) to group together signals needed for the internal `carry`, `sum` and `IO` interface.
 - [`DetectTwoOnes`](./src/main/FSM.scala): A simple finite state machine that uses `ChiselEnum` to represent the states.
 - [`Parity`](./src/main/Parity.scala): A simple circuit that uses an `Enum` (chisel) to represent the states instead of
   `ChiselEnum`.
@@ -25,7 +26,8 @@ Specifically, the following examples have been selected:
   - A `Router` object that defines constants that specify the characteristics of the router.
 
 Each example aims to illustrate the representation of a particular aspect supported by Chisel in the testing frameworks. 
-It also shows how this aspect relates to the Chisel source code.
+It also shows how this aspect relates to the Chisel source code. Sources and tests are located in the 
+[`src/main`](./src/main) and [`src/chiseltest`](./src/chiseltest) subdirectories, respectively.
 
 | Example            | Target                                                                                                                |
 | :----------------- | :-------------------------------------------------------------------------------------------------------------------- |
@@ -40,4 +42,4 @@ It also shows how this aspect relates to the Chisel source code.
 
 # References
 - [Chisel](https://www.chisel-lang.org/). The official Chisel website.
-- [`chisel-tutorial`](https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples) examples. The official Chisel tutorial examples main page.
+- [Chisel-tutorial](https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples) examples. The official Chisel tutorial examples main page.

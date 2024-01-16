@@ -23,7 +23,7 @@
  *      io.z_object := CLB(io.x, io.y, io.x, io.y)
  *      io.z_class := clb_class(io.x, io.y, io.x, io.y)
  *
- * This example is particularly interesting from the waveforms point of view.
+ * This example might be particularly interesting from the waveforms point of view.
  */
 
 package chiselexamples
