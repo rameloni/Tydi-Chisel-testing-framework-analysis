@@ -120,3 +120,44 @@ This has the main advantage to be fast and easy to integrate, compared to "manua
 Even though adding `VerboseAnnotation` allows to visually inspect all the signals in a more compact and fast way than `printf` debugging, it might lead to a very long and articulated output, especially for complex circuits. This can make it difficult to read and understand the circuit behavior even with small circuits like the `Adder`. 
 Secondly, this annotation does not make the designer able to choose subparts to inspect, but it prints all the signals of the circuit. 
 Finally, the `VerboseAnnotation` prints the FIRRTL representation of the circuit which may be as not readable as a chisel typed representation. Even though, types can be inferred from signals names it does not really match the chisel typed representation (what the designer actually wrote). It may become really difficult to associate the verbose output to the corresponding chisel signal/module.
+
+### Can IntelliJ IDEA breakpoint debugging be useful for Chisel related codes?
+Since Chisel is written on top of the scala language, IntelliJ IDEA reveals as a potential good IDE to write and debug Chisel code. 
+<!-- First of all, it provides syntax highlighting, code completion and dependency checking. Secondly, it allows to select and run tests directly from the IDE by simply right clicking on the play button next to the test name. -->
+
+<!-- ![idea-test-playbuttons](./images/idea-test-playbuttons.png) -->
+
+<!-- Next to that,  -->
+IntelliJ provides a scala debugger that allows to set breakpoints for a scala source code. 
+Therefore, the IDE lets the designer to set breakpoints on test code and chisel circuit code since both are written in scala as shown in the following pictures.
+
+| ![IDEA breakpoints on circuit signal assingments](./images/idea-breakpoints-on-testfunction.png) | ![IDEA breakpoints on circuit signal assingments](./images/idea-breakpoints-on-circuitassignments.png) |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Fig. 1 - *Set breakpoints in simulation chisel function from IntelliJ*                           | Fig. 2 - *Set breakpoints in signal circuit assignments from IntelliJ*                                 |
+
+The following section tries to understand whether this tool can be useful for Chisel or not.
+
+Once I ran a test in debug mode with the breakpoints reported in the pictures above, the debugger stopped at the breakpoints in fig. 2 first, while the circuit evaluation is performed and before the actual backend simulator is executed. 
+As stated in the chiseltest page[^1], chiseltest exploits other backend simulators to emulate the circuit behaviour and `peek`/`poke` functions are used to interact with that. 
+So, they result in the only valid interface to access signal values. 
+Fig. 3 shows the breakpoints during initialization of the `Adder` module and, as it can be seen, only the circuit structure can be inspected without any way associate values to a signals. 
+This might be due to the fact that the circuit is not simulated yet, however even after the simulation stops in the breakpoints of fig. 1, no signal values of the `dut` module are accessible from the debugger directly. 
+In order to do that, explicit new variables must be written by `peek` to see values as shown in fig. 4 and 5. 
+This will add additional code overhead to the tester functions without still providing a way to inspect the circuit structure. 
+Functionalities like `step over` and `step into` are also still not suitable for the circuit evaluation breakpoints since they works only for scala code. 
+
+This issue is addressed and solved by `hgdb`[^2] which allows to perform breakpoint debugging on the circuit. 
+This [section](../hgdb/README.md) provides more details about this topic.
+
+| ![idea-breakpoints-in-the-adder](./images/idea-breakpoint-inspection-on-circuitsignals.png) |
+| ------------------------------------------------------------------------------------------- |
+| Fig. 3 - *Breakpoint during initialization of the `Adder` module*                           |
+
+| ![idea-breakpoints](./images/idea-debugger-access-with-peek-and-assignment-tovar.png)         | ![idea](./images/idea-debugger-no-access-to-values-without-peek.png)                              |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Fig. 4 - *Breakpoint at `peek` of signals with explicit assignment to a variable in the test* | Fig. 5 - *Even the backend does not allow to access values of the signals from the idea debugger* |
+
+# References
+[^1]: Chisel. Home | Chisel. URL: https://www.chisel-lang.org/ (visited on 01/09/2024).
+
+[^2]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)

@@ -23,18 +23,18 @@ class SwAdder(n: Int) {
 }
 
 // Tester for the Adder module
-class AdderTester(c: Adder, stepsFor: Int = 1, printDebug: Boolean = false) extends PeekPokeTester(c) {
+class AdderTester(dut: Adder, stepsFor: Int = 1, printDebug: Boolean = false) extends PeekPokeTester(dut) {
 
   if (printDebug) {
 	System.out.println("=================================================================")
-	System.out.println(f"Module: ${c.name}")
-	System.out.println(f"${c.clock.name}%10s ${c.io.A.name}%10s ${c.io.B.name}%10s ${c.io.Cin.name}%10s ${c.io.Sum.name}%10s " +
-	  f"${c.io.Cout.name}%10s : Ports")
-	System.out.println(f"${DataMirror.directionOf(c.clock)}%10s ${DataMirror.directionOf(c.io.A)}%10s ${DataMirror.directionOf(c.io.B)}%10s " +
-	  f"${DataMirror.directionOf(c.io.Cin)}%10s ${DataMirror.directionOf(c.io.Sum)}%10s " +
-	  f"${DataMirror.directionOf(c.io.Cout)}%10s : Directions")
-	System.out.println(f"${c.clock.typeName}%10s ${c.io.A.typeName}%10s ${c.io.B.typeName}%10s ${c.io.Cin.typeName}%10s " +
-	  f"${c.io.Sum.typeName}%10s ${c.io.Cout.typeName}%10s : Types")
+	System.out.println(f"Module: ${dut.name}")
+	System.out.println(f"${dut.clock.name}%10s ${dut.io.A.name}%10s ${dut.io.B.name}%10s ${dut.io.Cin.name}%10s ${dut.io.Sum.name}%10s " +
+	  f"${dut.io.Cout.name}%10s : Ports")
+	System.out.println(f"${DataMirror.directionOf(dut.clock)}%10s ${DataMirror.directionOf(dut.io.A)}%10s ${DataMirror.directionOf(dut.io.B)}%10s " +
+	  f"${DataMirror.directionOf(dut.io.Cin)}%10s ${DataMirror.directionOf(dut.io.Sum)}%10s " +
+	  f"${DataMirror.directionOf(dut.io.Cout)}%10s : Directions")
+	System.out.println(f"${dut.clock.typeName}%10s ${dut.io.A.typeName}%10s ${dut.io.B.typeName}%10s ${dut.io.Cin.typeName}%10s " +
+	  f"${dut.io.Sum.typeName}%10s ${dut.io.Cout.typeName}%10s : Types")
 	System.out.println("=================================================================")
   }
 
@@ -42,26 +42,33 @@ class AdderTester(c: Adder, stepsFor: Int = 1, printDebug: Boolean = false) exte
 	throw new Exception("stepsFor must be >= 1")
   }
   // Sum every possible combination: make exhaustive test
-  for (a <- 1 until 1 << c.n by stepsFor)
-	for (b <- 1 until 1 << c.n by stepsFor)
+  for (a <- 1 until 1 << dut.n by stepsFor)
+	for (b <- 1 until 1 << dut.n by stepsFor)
 	  for (cin <- 0 until 2) {
 		// Set inputs
-		poke(c.io.A, a)
-		poke(c.io.B, b)
-		poke(c.io.Cin, cin)
+		poke(dut.io.A, a)
+		poke(dut.io.B, b)
+		poke(dut.io.Cin, cin)
+
 		// Advance the clock
 		step(1)
 
-		// Compute the reference sum and carry
-		val (sum, cout) = (new SwAdder(c.n))(a, b, cin == 1)
+		val copyOfDUT = dut
+		val peekedSum = peek(dut.io.Sum)
+		val peekedCout = peek(dut.io.Cout)
+		val peekedA = peek(dut.io.A)
+		val peekedB = peek(dut.io.B)
+		val peekedCin = peek(dut.io.Cin)
 
+		// Compute the reference sum and carry
+		val (sum, cout) = (new SwAdder(dut.n))(a, b, cin == 1)
 		// Check that the computed sum and carry are correct
-		expect(c.io.Sum, sum)
-		expect(c.io.Cout, cout)
+		expect(dut.io.Sum, sum)
+		expect(dut.io.Cout, cout)
 
 		if (printDebug)
-		  System.out.println(f"${t}%10s ${peek(c.io.A)}%10s ${peek(c.io.B)}%10s ${peek(c.io.Cin)}%10s " +
-			f"${peek(c.io.Sum)}%10s ${peek(c.io.Cout)}%10s")
+		  System.out.println(f"${t}%10s ${peek(dut.io.A)}%10s ${peek(dut.io.B)}%10s ${peek(dut.io.Cin)}%10s " +
+			f"${peek(dut.io.Sum)}%10s ${peek(dut.io.Cout)}%10s")
 	  }
 }
 
@@ -99,13 +106,13 @@ class AdderPrintfVerboseTest extends AnyFlatSpec with ChiselScalatestTester {
   it should "4 bit adder with verbose annotation" in {
 	test(new Adder(4, print = true))
 	  .withAnnotations(Seq(treadle2.VerboseAnnotation))
-	  .runPeekPoke(new AdderTester(_, stepsFor = 2, printDebug = false))
+	  .runPeekPoke(new AdderTester(_, stepsFor = 8, printDebug = false))
   }
 
   it should "4 bit adder with printf and verbose annotation" in {
 	test(new Adder(4, print = true))
 	  .withAnnotations(Seq(treadle2.VerboseAnnotation))
-	  .runPeekPoke(new AdderTester(_, stepsFor = 2, printDebug = true))
+	  .runPeekPoke(new AdderTester(_, stepsFor = 8, printDebug = true))
   }
 
 }
@@ -158,6 +165,7 @@ class AdderExposeTest extends AnyFlatSpec with ChiselScalatestTester {
 		}
 	  }
   }
+
 
 
 }
