@@ -78,12 +78,14 @@ class AdderClassicTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "4 bit adder" in {
 	test(new Adder(4, print = true))
-	  .runPeekPoke(new AdderTester(_))
+	  .withAnnotations(Seq(WriteVcdAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = 8))
   }
 
   it should "8 bit adder" in {
 	test(new Adder(8, print = false))
-	  .runPeekPoke(new AdderTester(_))
+	  .withAnnotations(Seq(WriteVcdAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = 16))
   }
 
   it should "21 bit adder" in {

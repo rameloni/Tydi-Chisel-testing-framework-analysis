@@ -1,50 +1,47 @@
-# Chiseltest: how `Chisel` and `Tydi-Chisel` code features are represented in `chiseltest`
-The [summary](../README.md#chiseltest) about chiseltest provided general considerations about the framework and its features.
+# An analysis of the features of chiseltest: a testing framework for Chisel and Chisel-related projects
 
-Here, a more detailed analysis of how `Chisel` and `Tydi-Chisel` code features are represented in `chiseltest` is provided.
-The document is divided per example where each example tries to address a specific feature provided by `Chisel` and `Tydi-Chisel`.
+Chisel test[^1] is an officially supported testing framework for Chisel[^2] that does not require any additional tools in order to be executed.
+> *ChiselTest integrates with the ScalaTest framework, which provides good IDE and continuous integration support for launching unit tests.*
+> 
+> Reference: `chiseltest`[^1]
+> 
+Therefore, it provides an easy-to-use tool with support for all Chisel and related projects.Thus, it is probably an excellent choice for Tydi-related projects as well.
 
-Most of the times, designers need to visually inspect signal values during simulation to understand the current behavior of the design under test. Hence, this analysis focuses on the representation of elements in testing frameworks w.r.t. their representation in source code.`printf`s, `treadle2.VerboseAnnotation` and `IntelliJ` IDEA breakpoint debugging can be used together with chiseltest for this purpose.
+The rest of this document is organized as follows. First, a general overview of what is possible to do with chiseltest is provided in section [1](#1-general-overview). Later sections focuse on different ways to test circuits and inspect their signals during simulation through chiseltest (sections [2](#2-inspecting-values-by-using-printf-debugging-with-explicit-print-statements), [3](#3-inspecting-values-by-using-treadle2verboseannotation), and [4](#4-can-intellij-idea-breakpoint-debugging-be-useful-for-chisel-related-codes)).
 
-## Adder: using `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
-Chisel provides the `Bundle` and `Vec` classes to group signals together of different and same type respectively. Their elements can be accessed as named fields for `Bundle` and as indexed elements for `Vec`, similar to software `struct`/`classes` and `array` respectively.
+## 1. General overview
+As it is integrated with the ScalaTest framework, chiseltest can exploit all exisiting features for scala testing[^4]. 
+Among the others, the opportunity to generate golden values from scala software functions in order to assess circuit outputs is a great advantage. Scala features such as loops, if statements, functions, class abstractions, templates represent an additional value in terms of test code reuse and readability. For example, it is also possible to create test templates that can be reused with different data as shown [here](https://github.com/ucb-bar/chiseltest/blob/main/src/test/scala/chiseltest/tests/AluTest.scala). 
 
-In the chosen example, the `Adder` module uses such classes to group together the signals needed for the internal `carry`, `sum` and `IO` interface.
 
-```scala
-// IO interface
-val io = IO(new Bundle {
-    val A = Input(UInt(n.W))
-    val B = Input(UInt(n.W))
-    val Cin = Input(UInt(1.W))
-    
-    val Sum = Output(UInt(n.W))
-    val Cout = Output(UInt(1.W))
-})
-// ...
-// Internal carry and sum signals
-val carry = Wire(Vec(n + 1, UInt(1.W)))
-val sum = Wire(Vec(n, Bool()))
-// ... 
-```
+In addition, it can make use of `scala` IDE functionalities, such as [IntelliJ IDEA](https://www.jetbrains.com/idea/), to run specific tests just clicking a button form the user interface.
+Along with that, ScalaTest integration offers the opportunity to divide tests in **test classes** and **test cases** to further improve organization and readability. 
+However, despite IntelliJ allows to set breakpoints in a scala code, breakpoint debugging is highly limited as stated in section [4](#4-can-intellij-idea-breakpoint-debugging-be-useful-for-chisel-related-codes), since tests are actually not executed by scala code but by one of the availables backends[^1].
+[HGDB](#hgdb) provides a solution to this problem, as it allows to set breakpoints on `Chisel` hardware code and inspect values line by line similar to software debuggers.
 
-A simpler carry propagate `Adder` consists of a concatenation of `FullAdder` modules. Those are instantiated using an `Array` of `FullAdder` chisel modules. This allows to write a single line of code to instantiate n-full adders.
+Upon closer examination of chiseltest functionalities, as documented on the main page [^1], it becomes evident that the framework offers peek/poke methods.These methods enable the reading and writing of circuit signals during simulation, providing direct access to their values in the testbench code. Consequently, these functions can be used for printf and assertion-based debugging as explored in sections [2](#2-inspecting-values-by-using-printf-debugging-with-peekpoke-and-explicit-print-statements) and [3](#3-inspecting-values-by-using-treadle2verboseannotation). 
+Nevertheless, peekpoke testing is limited to the IO ports of the circuit as the internal logic is not readily exposed "out-of-the-box." As argued in next sections, certain actions can be employed to perform peekpoke testing on internal logics, but this requires additional code effort from the developer.
+ChiselTest offers an annotation to print verbose information about the entire circuit on the output console, potentially resulting in an overly complex output leading to a non-trivial signal inspection.
 
-```scala
-// ...
-// Carry propagate adder
-val FAs = Array.fill(n)(Module(new FullAdder()))
-// ...
-```
+Finally, ChiselTest supports the generation of simulation trace files, producing [VCD](https://en.wikipedia.org/wiki/Value_change_dump), [FST](https://gtkwave.sourceforge.net/gtkwave.pdf), and [LXT](https://gtkwave.sourceforge.net/gtkwave.pdf) files for the current simulation. These trace files can subsequently be utilized in existing waveform viewers, such as [GTKWave](https://gtkwave.sourceforge.net/gtkwave.pdf), enabling the selection and observation of signals across the circuit hierarchy in a potentially more convenient manner.
 
-### Inspecting values by using `printf` debugging with explicit print statements
-As mentioned in the previous section, `printf` debugging can be used to output custom messages with special representation of signals during simulation. Specifically, in [AdderTest.scala](../../examples/chisel-examples/src/chiseltest/AdderTest.scala) I tried to create simple custom messages to print a truth table of IO signals of the `Adder` module together with their names, directions and types.
-Chisel elements have some attribute functions to retrieve some information. For example `name` and `typeName` fields can be used to dynamically access the name and type of signals, therefore if the signal name and/or type changes, the printed message will be automatically updated. While the `peek` function can be used to retrieve the current value of a signal during simulation.
+The following sections explore on how `printf`, `VerboseAnnotation` and `IntelliJ IDEA` breakpoint debugging can be used in chiseltest to inspect circuit values. The analysis will include a discussion of the advantages and drawbacks of each.
 
-The following text contains portion of an example output ([printfDebuggingExample.txt](./sample-outputs/printfDebuggingExample.txt)) that can be obtained using `printf` debugging. I wrote my own
-print statements to outputs the truth table and make it suitable for the adder test. Explicit writing of printf statements allows to customize the output format
-basing on what the user wants to see. However, it does not represent a ready to use solution since it requires to be written
-and updated for each new module and new change. This approach can become more difficult to implement with complex modules. In addition, its implementation highly depends on the designer's coding style, so it does not lead to a standardized signal inspection during simulation.
+> **Note:** The following sections are based on the [AdderTest.scala](../../examples/chisel-examples/src/chiseltest/AdderTest.scala) testbench to test an `Adder` module composed of cascaded `FullAdder`s. 
+> Both modules are available in the [chisel-examples](../../examples/chisel-examples/src/main/scala/chiseltest/examples) folder. 
+
+## 2. Inspecting values by using `printf` debugging with `peekpoke` and explicit print statements
+As mentioned in the previous section, `printf` debugging can be used to output custom messages with special representation of signals during simulation.
+Specifically, chisel elements have some attribute functions to retrieve information, such as the element name and type, that can be used in conjunction with peekpoke to print well formatted outputs.
+Precisely, `name` and `typeName` fields can be used to dynamically access those values. Therefore, if the signal name and/or type changes, the printed message will be automatically updated. Similarly, the `peek` function can be used to retrieve the current value of a signal during simulation.
+
+The `AdderTester` in [AdderTest.scala](../../examples/chisel-examples/src/chiseltest/AdderTest.scala) provides an example of `printf` debugging which output is reported in [printfDebuggingExample.txt](./sample-outputs/printfDebuggingExample.txt). Below, a portion of the output is presented.
+An explicit writing of printf statements allows to customize the output format to align with the developer's preferences. 
+Thus, this method allows to create the best and comprehensive format for each specific debugging case such as the truth table below. 
+
+However, this approach does not represent a ready-to-use solution, as it necessitates manual writing and updates for each new module and significant module changes. 
+Additionally, explicit printf debugging fails to establish a standardized signal inspection and may contribute to a less readable testbench code.
+In addition, its implementation highly depends on the designer's coding style, so it does not lead to a standardized signal inspection during simulation.
 
 ```text
 =================================================================
@@ -69,12 +66,19 @@ Module: Adder
 . . . . . . . . . . . . . . . 
 ```
 
-Next to that, `chiseltest` does not provide a way to inspect the internal signals of the module under test with `peek`/`poke` interface. This can be overcome by writing a `Wrapper` module that extends the actual `DUT` (design under test) to **manually** expose internal signals as output ports with the `chiseltest.experimental.expose`. Also this solution requires to write additional code and to adapt it any time the internal logic changes. Furthermore, the experimental `expose` method allows to expose directly only `Reg`, `Wire` and `Vec`. Namely, signals of submodules (such as the `Array` of `FullAdder`s) or subbundles require even more code to be written than expected.
+The utilization of printf debugging in `chiseltest` uncovered another limitation. When attempting to inspect the internal signals of a module, either wires or IO signals of a submodule, the `peek` function raised an exception due to the inaccessibility of these values from outside the `DUT` (Device Under Test).
+Nonetheless, this can be overcome by writing a `Wrapper` module that extends the actual `DUT` to **manually** expose internal signals as output ports with the `chiseltest.experimental.expose`.
+Hence, any testing technique that can be used for IO ports can be now also used for internal exposed signals, such as `printf` debugging and `assertion-based` debugging (with `expect`).
 
-As a workaround, I wrote an object function ([`ExposeBundle`](../../examples/chisel-examples/src/chiseltest/modulewrappers/ExposeBundle.scala)) to expose dynamically all the signals inside a `Bundle`. This allows to dynamically expose all the signals inside an internal `Bundle` without the need to both write additional code and know what is inside the bundle beforehand.
-However, an automatic expose/wrap functionality for an entire `Module` would be a great feature to have.
+However, there are some drawbacks to this `expose` method. 
+Likewise printf statements, also this method requires to write additional code and to adapt it any time the internal logic changes.
+Furthermore, only `Reg`, `Wire` and `Vec` can be exposed directly by this experimental chiseltest function.
+Namely, signals of submodules (such as the `Array` of `FullAdder`s) or subbundles require even more code to be written than expected.
+
+As a workaround, I created a utility function ([`ExposeBundle`](../../examples/chisel-examples/src/chiseltest/modulewrappers/ExposeBundle.scala)) to expose dynamically all the signals inside a `Bundle`. 
+This enables the dynamic exposure of all signals within an internal Bundle without the necessity  of writing additional code or knowing what content the bundle has beforehand.
+A dedicated function to expose or encapsulate an entire module would indeed constitute a valuable and beneficial feature.
 The [`AdderWrapper`](../../examples/chisel-examples/src/chiseltest/modulewrappers/AdderWrapper.scala) module serves an example of this solution. When instantiated in the test, it allows to inspect the internal signals of the `Adder` as if they were IO ports available only during simulation as shown in [`AdderExposeTest`](../../examples/chisel-examples/src/chiseltest/AdderTest.scala).
-Therefore, any testing technique that can be used for IO ports can be also used for internal exposed signals, such as `printf` debugging and `assertion-based` debugging (with `expect`).
 
 ```scala
   it should "adder with exposed ports by parameter" in {
@@ -102,11 +106,10 @@ Therefore, any testing technique that can be used for IO ports can be also used 
 
 ```
 
-Finally, designers also need and want to inspect only a subpart of a circuit or some signals. With `printf` debugging, this requires custom updates of the testbench.
+Finally, designers may need and want to inspect only a subpart of a circuit or some signals. With printf debugging, achieving this goal necessitates once again the implementation of custom updates to the testbench.
 
-### Inspecting values by using `treadle2.VerboseAnnotation`
-An alternative to explicit `printf` debugging is the usage of `VerboseAnnotation` in the test as shown in the code snippet below.
-By simply adding this annotation, the test will print all the signals (IO and internal) of the circuit at each simulation step. 
+## 3. Inspecting values by using `treadle2.VerboseAnnotation`
+In contrast to explicit `printf` debugging, a verbose output can be achieved by simply adding one line of code through `VerboseAnnotation`, as reported in the following code snippet. Now, information about the whole circuit (IO and internal logic) will be outputted in the terminal at each simulation step.
 ```scala
 it should "4 bit adder with verbose annotation" in {
 	test(new Adder(4, print = true))
@@ -114,39 +117,37 @@ it should "4 bit adder with verbose annotation" in {
 	  .runPeekPoke(new AdderTester(_, stepsFor = 8, printDebug = false))
 }  
 ```
-This has the main advantage to be fast and easy to integrate, compared to "manual" `printf`, as it does not require to write additional code. It can be also used together with any valid chisel test function.For example, the code above runs a `PeekPokeTester` which has been written regardless of the `VerboseAnnotation`. However, it still needs module expose wrappers if the designer wants to apply `assertion-based` debugging to internal signals, exactly as it happened for explicit `printf` debugging.
+This has the main advantage to be fast and easy to integrate, compared to explicit `printf`, as it requires only one line of code and entails no need for future updates.
+Moreover, testbench functions can be implemented regardless of the VerboseAnnotation and kept readable and concise.
+However, `assertion-based` debugging cannot be applied to internal logic without the presence of an expose wrapper yet.
 [verboseAnnotationOutputExample.txt](./sample-outputs/verboseAnnotationOutputExample.txt) contains an example of the output of the test above.
 
-Even though adding `VerboseAnnotation` allows to visually inspect all the signals in a more compact and fast way than `printf` debugging, it might lead to a very long and articulated output, especially for complex circuits. This can make it difficult to read and understand the circuit behavior even with small circuits like the `Adder`. 
-Secondly, this annotation does not make the designer able to choose subparts to inspect, but it prints all the signals of the circuit. 
-Finally, the `VerboseAnnotation` prints the FIRRTL representation of the circuit which may be as not readable as a chisel typed representation. Even though, types can be inferred from signals names it does not really match the chisel typed representation (what the designer actually wrote). It may become really difficult to associate the verbose output to the corresponding chisel signal/module.
+Although adding `VerboseAnnotation` allows to visually inspect all the signals in a more compact and fast way than `printf` debugging, it might lead to very long and articulated outputs, especially for complex circuits. This can make reading and understanding the circuit behavior difficult even with small circuits like the `Adder`. 
+Secondly, this annotation does not make the designer able to choose which subparts to inspect from the output, because it prints all the signals of the circuit. 
+Finally, the `VerboseAnnotation` prints signals names according to the FIRRTL representation of the circuit which does not match a chisel typed representation (what the designer actually wrote). It may become really difficult to associate the verbose output to the corresponding chisel signal/module.
 
-### Can IntelliJ IDEA breakpoint debugging be useful for Chisel related codes?
-Since Chisel is written on top of the scala language, IntelliJ IDEA reveals as a potential good IDE to write and debug Chisel code. 
-<!-- First of all, it provides syntax highlighting, code completion and dependency checking. Secondly, it allows to select and run tests directly from the IDE by simply right clicking on the play button next to the test name. -->
+## 4. Can IntelliJ IDEA breakpoint debugging be useful for Chisel related codes?
+Since Chisel is written on top of the scala language, IntelliJ IDEA reveals potentially good IDE to write and debug Chisel code. 
 
-<!-- ![idea-test-playbuttons](./images/idea-test-playbuttons.png) -->
-
-<!-- Next to that,  -->
 IntelliJ provides a scala debugger that allows to set breakpoints for a scala source code. 
-Therefore, the IDE lets the designer to set breakpoints on test code and chisel circuit code since both are written in scala as shown in the following pictures.
+Therefore, the IDE lets the designer to set breakpoints on test code and chisel circuit code, as shown in the following figures, since both are written in scala.
 
 | ![IDEA breakpoints on circuit signal assingments](./images/idea-breakpoints-on-testfunction.png) | ![IDEA breakpoints on circuit signal assingments](./images/idea-breakpoints-on-circuitassignments.png) |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | Fig. 1 - *Set breakpoints in simulation chisel function from IntelliJ*                           | Fig. 2 - *Set breakpoints in signal circuit assignments from IntelliJ*                                 |
 
-The following section tries to understand whether this tool can be useful for Chisel or not.
+This section tries to understand whether this tool can be useful for Chisel or not.
 
-Once I ran a test in debug mode with the breakpoints reported in the pictures above, the debugger stopped at the breakpoints in fig. 2 first, while the circuit evaluation is performed and before the actual backend simulator is executed. 
+Once I ran a test in debug mode with the breakpoints, the debugger stopped at the breakpoints in fig. 2 first, during the circuit evaluation and before the actual backend simulator execution. 
 As stated in the chiseltest page[^1], chiseltest exploits other backend simulators to emulate the circuit behaviour and `peek`/`poke` functions are used to interact with that. 
-So, they result in the only valid interface to access signal values. 
-Fig. 3 shows the breakpoints during initialization of the `Adder` module and, as it can be seen, only the circuit structure can be inspected without any way associate values to a signals. 
-This might be due to the fact that the circuit is not simulated yet, however even after the simulation stops in the breakpoints of fig. 1, no signal values of the `dut` module are accessible from the debugger directly. 
-In order to do that, explicit new variables must be written by `peek` to see values as shown in fig. 4 and 5. 
+So, they are the only valid interface to access signal values. 
+Fig. 3 shows the breakpoints during initialization of the `Adder` module and, as it can be seen, only the circuit structure can be inspected **without any way associate values to signals**. 
+This might be due to the fact that the circuit is not simulated yet. However, even once the simulation stops in the breakpoints of fig. 1, no signal values of the `dut` module are accessible from the debugger directly. 
+In order to do that, explicit new variables must be declared and assigned by `peek` to see values as shown in fig. 4 and 5. 
 This will add additional code overhead to the tester functions without still providing a way to inspect the circuit structure. 
 Functionalities like `step over` and `step into` are also still not suitable for the circuit evaluation breakpoints since they works only for scala code. 
 
-This issue is addressed and solved by `hgdb`[^2] which allows to perform breakpoint debugging on the circuit. 
+This issue is addressed and solved by `hgdb`[^3] which allows to perform breakpoint debugging on circuit code. 
 This [section](../hgdb/README.md) provides more details about this topic.
 
 | ![idea-breakpoints-in-the-adder](./images/idea-breakpoint-inspection-on-circuitsignals.png) |
@@ -158,6 +159,11 @@ This [section](../hgdb/README.md) provides more details about this topic.
 | Fig. 4 - *Breakpoint at `peek` of signals with explicit assignment to a variable in the test* | Fig. 5 - *Even the backend does not allow to access values of the signals from the idea debugger* |
 
 # References
-[^1]: Chisel. Home | Chisel. URL: https://www.chisel-lang.org/ (visited on 01/09/2024).
+[^1]: The officially supported testing framework for Chisel and Chisel-related projects. [![chiseltest](https://img.shields.io/badge/Github_Page-chiseltest-green)](https://github.com/ucb-bar/chiseltest)
 
-[^2]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
+[^2]: Chisel. Home | Chisel. URL: https://www.chisel-lang.org/ (visited on 01/09/2024).
+
+[^3]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
+
+[^4]: ScalaTest, a testing framework for the Scala ecosystem. [![scalatest](https://img.shields.io/badge/Web_Page-www.scalatest.org-blue)](https://www.scalatest.org/)
+
