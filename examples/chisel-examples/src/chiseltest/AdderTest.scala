@@ -9,7 +9,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import chisel3.reflect.DataMirror
 import chisel3.stage.PrintFullStackTraceAnnotation
 import chiselexamples.adder.modulewrapper.{AdderWrapperByInheritance, AdderWrapperByParameter}
-import chiselexamples.expose.ExposeModule
 
 // Class to add two n-bit numbers
 class SwAdder(n: Int) {
@@ -20,7 +19,7 @@ class SwAdder(n: Int) {
 	// Return the sum and the carry out
 	(sum & mask, ((sum >> n) & 1) == 1)
   }
-}
+} // end class SwAdder
 
 // Tester for the Adder module
 class AdderTester(dut: Adder, stepsFor: Int = 1, printDebug: Boolean = false) extends PeekPokeTester(dut) {
@@ -70,7 +69,7 @@ class AdderTester(dut: Adder, stepsFor: Int = 1, printDebug: Boolean = false) ex
 		  System.out.println(f"${t}%10s ${peek(dut.io.A)}%10s ${peek(dut.io.B)}%10s ${peek(dut.io.Cin)}%10s " +
 			f"${peek(dut.io.Sum)}%10s ${peek(dut.io.Cout)}%10s")
 	  }
-}
+} // end class AdderTester
 
 
 class AdderClassicTest extends AnyFlatSpec with ChiselScalatestTester {
@@ -95,7 +94,7 @@ class AdderClassicTest extends AnyFlatSpec with ChiselScalatestTester {
 	  .runPeekPoke(new AdderTester(_, stepsFor = 10_000))
   }
 
-}
+} // end class AdderClassicTest
 
 class AdderPrintfVerboseTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "AdderPrintfVerboseTest"
@@ -117,7 +116,7 @@ class AdderPrintfVerboseTest extends AnyFlatSpec with ChiselScalatestTester {
 	  .runPeekPoke(new AdderTester(_, stepsFor = 8, printDebug = true))
   }
 
-}
+} // end class AdderPrintfVerboseTest
 
 class AdderExposeTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "AdderExposeTest"
@@ -168,6 +167,48 @@ class AdderExposeTest extends AnyFlatSpec with ChiselScalatestTester {
 	  }
   }
 
+} // end class AdderExposeTest
 
+class AdderWaveformTest extends AnyFlatSpec with ChiselScalatestTester {
+  behavior of "AdderWaveformTest"
 
-}
+  val n = 5
+  val print = false
+  val stepsFor = 3
+
+  it should "dump Treadle VCD" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(WriteVcdAnnotation, TreadleBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+
+  it should "dump Verilator VCD" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(WriteVcdAnnotation, VerilatorBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+
+  it should "dump Icarus VCD" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(WriteVcdAnnotation, IcarusBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+
+  it should "dump Verilator FST" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(WriteFstAnnotation, VerilatorBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+
+  it should "dump Icarus FST" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(WriteFstAnnotation, IcarusBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+
+  it should "dump Icarus LXT" in {
+	test(new Adder(n = n, print = print))
+	  .withAnnotations(Seq(new WriteLxtAnnotation, IcarusBackendAnnotation))
+	  .runPeekPoke(new AdderTester(_, stepsFor = stepsFor))
+  }
+} // end class AdderWaveformTest

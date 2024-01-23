@@ -30,3 +30,21 @@ val FAs = Array.fill(n)(Module(new FullAdder()))
 // ...
 ```
  -->
+
+
+
+<!-- 
+A vector in the waveforms appear as a lot of parrallel signals.
+```scala
+  val carry = Wire(Vec(n + 1, UInt(1.W)))
+```
+This produces something more similar to a vector in the waveforms.
+```scala
+  val carryNormal = Wire(UInt((n + 1).W))
+```
+However, `UInt` are not intended to be used as vectors. So, it is not possible to access individual bits of `carryNormal` in the same way as `carry`. This is a problem when trying to test the circuit.
+```scala
+  carryNormal(0) := 0.U
+```
+![Alt text](image.png)
+ -->

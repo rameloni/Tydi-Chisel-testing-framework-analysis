@@ -2,7 +2,7 @@
 This folder contains considerations and results of the analysis that has been made. Specifically, the result folder is divided as follows:
 - The [chiseltest](chiseltest) folder analyzes the `chiseltest`[^1] tool and the features related to it with a focus on the advantages and disadvantages of the tool.
 - [hgdb](hgdb) reports the observations about the `hgdb`[^4][^5] debugger tool.
-- The [waveforms](waveforms) directory, instead, explore first the strenghts of signals inspections from waveform viewers and it finally highlights the weknesses of signal representations for debugging circuits written in modern HDLs, in this case Chisel.
+- The [waveforms](waveforms) directory, instead, explore first the strenghts of signals inspections from waveform viewers and it finally highlights the generic weknesses of signal representations for debugging circuits written in modern HDLs, in this case Chisel.
 - Finally,  all the examples in the [examples](../examples/) folder have been tested with the three tools. [analysis-by-example](analysis-by-example) analyzes each example, highlighting the advantages and disadvantages of each tool for each aspect highlighted by the examples. It especially focuses on how the Chisel and Tydi-Chisel code is represented by the tools.
 
 
