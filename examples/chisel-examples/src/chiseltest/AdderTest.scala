@@ -1,13 +1,11 @@
 package chiselexamples
 package adder
 
-import chisel3.Data
-import chisel3.experimental.BaseModule
+
 import chiseltest._
 import chiseltest.iotesters.PeekPokeTester
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3.reflect.DataMirror
-import chisel3.stage.PrintFullStackTraceAnnotation
 import chiselexamples.adder.modulewrapper.{AdderWrapperByInheritance, AdderWrapperByParameter}
 
 // Class to add two n-bit numbers

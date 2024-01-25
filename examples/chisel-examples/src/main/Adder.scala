@@ -17,6 +17,7 @@ package chiselexamples
 package adder
 
 import chisel3._
+import chisel3.util.random.FibonacciLFSR
 import circt.stage.ChiselStage
 
 // import chisel3.experimental.{ChiselAnnotation, annotate}
@@ -29,13 +30,18 @@ import circt.stage.ChiselStage
 class Adder(val n: Int, val print: Boolean = false) extends Module {
   // IO interface
   val io = IO(new Bundle {
-    val A = Input(UInt(n.W))
-    val B = Input(UInt(n.W))
-    val Cin = Input(UInt(1.W))
-    
-    val Sum = Output(UInt(n.W))
-    val Cout = Output(Bool())
+	val A = Input(UInt(n.W))
+	val B = Input(UInt(n.W))
+	val Cin = Input(UInt(1.W))
+
+	val Sum = Output(UInt(n.W))
+	val Cout = Output(Bool())
   })
+
+  val io_A = Wire(UInt(n.W))
+  io_A := FibonacciLFSR.maxPeriod(n).asUInt
+  dontTouch(io_A)
+
   // val named =
   //   ComponentName(io.A.name, ModuleName(this.name, CircuitName("TopCircuitCustomName")))
   // val anno = Iterable(SinkAnnotation(named.asInstanceOf[Named], "CustomAnnotation"))
@@ -45,19 +51,31 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
   //  we use an Array instead of a Vec.
   // Internal logic
   val FAs = Array.fill(n)(Module(new FullAdder()))
+  val FullAdder = Wire(UInt(1.W))
+  dontTouch(FullAdder)
+
+  val FullAdder_5 = Module(new FullAdder())
   val carry = Wire(Vec(n + 1, UInt(1.W)))
   val sum = Wire(Vec(n, Bool()))
+  val sum_2 = Wire(Vec(n, UInt(1.W)))
+  dontTouch(sum_2)
+
+  FullAdder := 1.U
+  FullAdder_5.io.a := 1.U
+  FullAdder_5.io.b := 3.U
+  FullAdder_5.io.cin := io.Cout && sum(1).asBool
 
   // first carry is the top level carry in
-   carry(0) := io.Cin
+  carry(0) := io.Cin
 
   // wire up the ports of the full adders
   for (i <- 0 until n) {
-    FAs(i).io.a := io.A(i)
-    FAs(i).io.b := io.B(i)
-    FAs(i).io.cin := carry(i)
-    carry(i + 1) := FAs(i).io.cout
-    sum(i) := FAs(i).io.sum.asBool
+	FAs(i).io.a := io.A(i)
+	FAs(i).io.b := io.B(i)
+	FAs(i).io.cin := carry(i)
+	carry(i + 1) := FAs(i).io.cout
+	sum(i) := FAs(i).io.sum.asBool
+	sum_2(i) := sum(i)
   }
 
   io.Sum := sum.asUInt
@@ -65,9 +83,9 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
 
   // For debugging purposes
   if (print) {
-    System.out.println(
-      s"Adder: ${n} ${io.A.name} ${io.B.name} ${io.Cin.name} ${io.Sum.name} ${io.Cout.name}"
-    )
+	System.out.println(
+	  s"Adder: ${n} ${io.A.name} ${io.B.name} ${io.Cin.name} ${io.Sum.name} ${io.Cout.name}"
+	)
   }
 }
 
@@ -78,25 +96,25 @@ object AdderVerilog extends App {
 
   // emit Verilog
   emitVerilog(
-    new Adder(n, print),
-    Array("--split-verilog", "--target-dir", outputDir)
+	new Adder(n, print),
+	Array("--split-verilog", "--target-dir", outputDir)
   )
 }
 
 object AdderFIRRTL extends App {
   private val outputDir = "output/adder/firrtl"
-  val n = 4
+  val n = 5
   private val print = true
 
   val firrtl = ChiselStage.emitCHIRRTL(
-    new Adder(n, print),
-//    Array("-td", outputDir)
+	new Adder(n, print),
+	//    Array("-td", outputDir)
   )
 
   // val thisDir = new java.io.File(".").getCanonicalPath
   val dir = new java.io.File(outputDir)
   if (!dir.exists()) {
-    dir.mkdir()
+	dir.mkdir()
   }
 
   val pw = new java.io.PrintWriter(new java.io.File(outputDir + "/Adder.fir"))

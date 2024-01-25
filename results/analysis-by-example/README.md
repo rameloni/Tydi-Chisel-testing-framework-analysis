@@ -1,6 +1,17 @@
-<!-- 
-## Adder: using `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
-Chisel provides the `Bundle` and `Vec` classes to group signals together of different and same type respectively. Their elements can be accessed as named fields for `Bundle` and as indexed elements for `Vec`, similar to software `struct`/`classes` and `array` respectively.
+# A detailed analysis of Tydi-Chisel representations in testing frameworks
+This section proposes an analysis of how specific elements of Tydi-Chisel are represented in different testing frameworks. 
+This section aims to identify the weaknesses in the current representations with particular focus on the **mismatch** between the Chisel **source code** and the testing **framework representation**. Namely, what the designer writes in Chisel and Tydi and what they see in the testing framework.
+
+> **Note:** A more general analysis about each testing frameworks is provided in each respective directory in [results](/results).
+
+
+## List of [Examples](../../examples/)
+- [Adder](#adder)
+
+
+## Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
+Chisel provides the `Bundle` and `Vec` classes to group signals together of different and same type respectively. 
+Their elements can be accessed as named fields for `Bundle` and as indexed elements for `Vec`, similar to software `struct`/`class` and `array`.
 
 In the chosen example, the `Adder` module uses such classes to group together the signals needed for the internal `carry`, `sum` and `IO` interface.
 
@@ -21,7 +32,9 @@ val sum = Wire(Vec(n, Bool()))
 // ... 
 ```
 
-A simpler carry propagate `Adder` consists of a concatenation of `FullAdder` modules. Those are instantiated using an `Array` of `FullAdder` chisel modules. This allows to write a single line of code to instantiate n-full adders.
+A simpler carry propagate `Adder` consists of a concatenation of `FullAdder` modules. 
+Those are instantiated using an `Array` of `FullAdder` chisel modules. 
+This allows to write a single line of code to instantiate n-full adders.
 
 ```scala
 // ...
@@ -29,22 +42,101 @@ A simpler carry propagate `Adder` consists of a concatenation of `FullAdder` mod
 val FAs = Array.fill(n)(Module(new FullAdder()))
 // ...
 ```
- -->
+Since Chisel is built on top of the scala language, its constructs can be used to manipulate the Chisel elements.
+Bundle, Vec and Array can be simply accessed in the code as named fields and indexed elements. 
+This is shown in the following code snippet. 
+Moreover, for loops and integer variables can be used to iterate over arrays and vectors.
 
+```scala
+  // ...
+  carry(0) := io.Cin // accessing and assigning a vector element through indexing
+  // ...
+  for (i <- 0 until n) { // use for loop to iterate over arrays
+    // ...
+    FAs(i).io.cin := carry(i) // indexing an array of modules and accessing its named fields
+    carry(i + 1) := FAs(i).io.cout
+    sum(i) := FAs(i).io.sum.asBool
+  }
+  // ...
+  io.Sum := sum.asUInt
+  io.Cout := carry(n) // use parametrized integer variable to access vector element
+```
 
+The previous code snippets illustrate how a developer can declare, access, and manipulate `Bundle`, `Vec`, and `Array`. 
+These basic constructs arise the abstraction level when compared to low-level HDLs and allow to orgnaize the code in a more structured and concise format.
+In languages like Verilog, concepts similar to `Bundle` and `Array` of modules do not exist, despite the presence of bit vectors and arrays of bits (`Vec`).
 
-<!-- 
-A vector in the waveforms appear as a lot of parrallel signals.
+Fig. 1 shows a bundle representation in waveforms.
+In contrast to its chisel access. Its elements are not grouped by default under an `io` group and they are not represented as named fields. 
+Yet, they are drawn as separate parallel signals and the parent bundle name can be retrieved from the signal name convention (`bundleName_signalName`). 
+
+| ![Adder IO bundle](./images/adder/adder_bundle.png)                  |
+| -------------------------------------------------------------------- |
+| Fig. 1 - *A Chisel `Bundle` to group IO signals in waveform viewers* |
+
+Similarly to bundles, also the waveform representation of vec does not match the code structure as it can be inspected in fig. 2. 
+Indeed, vector elements are not grouped and displayed as indexed arrays, but they are represented as separate parallel signals.
+Similarly to bundle the actual chisel `val` can be retrived from the signal name followed by an underscore and index (`name_i`).
+Using `UInt(n.W)` instead of `Vec(n, UInt(1.W))` produces a different waveform representation more similar to a vector (see io_A in fig. 3). 
+However, `UInt` cannot be indexed in chisel.
+Hence, it is not possible to access individual bits of a `val carr = Wire(UInt((n+1).W))` in the same way as `val carry = Wire(Vec(n + 1, UInt(1.W))))`.
+
+| ![Adder Vec signals](./images/adder/adder_vec.png)                      |
+| ----------------------------------------------------------------------- |
+| Fig. 2 - *A Chisel `Vec` to represent a bit vector in waveform viewers* |
+
+Finally, the waveform representation of an array of modules is shown in fig. 3.
+Comparatively to the previous cases, an array of modules kinda maintains the structure of the chisel code, since a sub-module is instantiated for each element (`FullAdder_i` in the example).
+At the same time, they do not reflect that those FullAdders are grouped together in an array.
+
+| ![Adder Array of modules](./images/adder/adder_array_of_modules.png)     |
+| ------------------------------------------------------------------------ |
+| Fig. 3 - *A scala `Array` to instantiate multiple sub-modules in chisel* |
+
+To test the robustness of this representation with this naming convention, I updated the code above by adding new `val` signals with the names that `io.A` and `sum(2)` have in fig. 1 and 2, namely `io_A` and `sum_2`.
+This change does not affect behaviour of the previous logic. 
+It does not raise issues while accessing the old signals since in Chisel:
 ```scala
-  val carry = Wire(Vec(n + 1, UInt(1.W)))
+  // These val are different: io.A is not io_A
+  val io = IO(new Bundle {
+    val A = Input(UInt(n.W))
+  })
+  val io_A = Wire(UInt(n.W))
+  
+  // Same for sum: sum(2) is not sum_2
+  val sum = Wire(Vec(n, Bool()))
+  val sum_2 = Wire(Vec(n, UInt(1.W)))
 ```
-This produces something more similar to a vector in the waveforms.
+However, this update raises issues while inspecting signal names from waveform viewers due to the naming convention used in the translation to FIRRTL.
+After I run the simulation with this new signals, such a simple addition to the code surprisingly affected the waveform signal names, despite the fact that the rest of chisel code is untouched.
+The signal (`val sum`) changed name in the viewer as shown in fig. 4. 
+Since its original name is now not present anymore, the signal disappeared from the waveform viewer. 
+Specifically, the old `sum_i` (`sum(i)` in chisel) is renamed to `sum__i`, it conflicted with the `val sum_2` in the FIRRTL representation.
+This affected `io_A` in a similar manner.
+As a consequence, FIRRTL naming convention makes more difficult to understand which names indicate which `val` in chisel code, leading to a naming "overlap" which is not present in the chisel code.
+
+| ![Adder Array of modules](./images/adder/adder_test_robustness_name_convention.png)                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| Fig. 4 - *Some signal names in chisel causes name conflicts in the FIRRTL representation which may lead to confusion in waveforms* |
+
+The code snippet below and fig. 5 provide another example of naming issues. Here, a new wire named `FullAdder` and a module `FullAdder_5` are declared.
+From fig. 5 it is counterintuitive to understand wether the `FullAdder` is used for the module `FAs(0)` or for the wire `FullAdder`. Similarly, it is impossible to establish if `FullAdder_5` is whether the 5th element of the array `FAs` or just a separate module `FullAdder_5`.
+
+Going more in depth, this example shows additional problems:
+- the name `FullAdder_5` in waveforms corresponds to `FullAdder` in chisel
+- `FullAdder_5_1` is related to the `FullAdder_5` module
+
+<!-- This method that maps sub-elements of `Bundle`, `Vec` and `Array` to names followed by underscore and index/field name is  -->
+
 ```scala
-  val carryNormal = Wire(UInt((n + 1).W))
+// ...
+// Carry propagate adder
+val FAs = Array.fill(n)(Module(new FullAdder()))
+val FullAdder = Wire(UInt(2.W))
+val FullAdder_5 = Module(new FullAdder())
+// ...
 ```
-However, `UInt` are not intended to be used as vectors. So, it is not possible to access individual bits of `carryNormal` in the same way as `carry`. This is a problem when trying to test the circuit.
-```scala
-  carryNormal(0) := 0.U
-```
-![Alt text](image.png)
- -->
+
+| ![Full Adders](./images/adder/adder_test_robustness_name_convention_fulladders.png)           |
+| --------------------------------------------------------------------------------------------- |
+| Fig. 5 - *Another example in which some signal names in chisel causes confusion in waveforms* |
