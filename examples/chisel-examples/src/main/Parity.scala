@@ -21,8 +21,8 @@ import circt.stage.ChiselStage
 // Check if the sequence of input 1's is even or odd
 class Parity extends Module {
   val io = IO(new Bundle {
-	val in = Input(Bool())
-	val out = Output(Bool())
+    val in = Input(Bool())
+    val out = Output(Bool())
   })
 
   val s_even :: s_odd :: Nil = Enum(2)
@@ -30,12 +30,12 @@ class Parity extends Module {
 
   // State logic
   when(io.in) {
-	when(state === s_even) {
-	  state := s_odd
-	}
-	  .otherwise {
-		state := s_even
-	  }
+    when(state === s_even) {
+      state := s_odd
+    }
+      .otherwise {
+        state := s_even
+      }
   }
 
   // Output logic
@@ -48,8 +48,8 @@ object ParityVerilog extends App {
 
   // emit Verilog
   emitVerilog(
-	new Parity(),
-	Array("--target-dir", outputDir, "--split-verilog")
+    new Parity(),
+    Array("--target-dir", outputDir, "--split-verilog")
   )
 }
 
@@ -57,17 +57,17 @@ object ParityFIRRTL extends App {
   private val outputDir = "output/parity/firrtl"
 
   val firrtl = ChiselStage.emitCHIRRTL(
-	new Parity(),
+    new Parity(),
   )
 
   // val thisDir = new java.io.File(".").getCanonicalPath
   val dir = new java.io.File(outputDir)
   if (!dir.exists()) {
-	dir.mkdir()
+    dir.mkdir()
   }
 
   val pw =
-	new java.io.PrintWriter(new java.io.File(outputDir + "/Parity.fir"))
+    new java.io.PrintWriter(new java.io.File(outputDir + "/Parity.fir"))
   pw.write(firrtl)
   pw.close()
 

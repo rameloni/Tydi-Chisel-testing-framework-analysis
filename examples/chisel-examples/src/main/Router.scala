@@ -63,11 +63,11 @@ class Packet extends Bundle {
 }
 
 /** The router circuit IO It routes a packet placed on its single input port to
-  * one of n output ports
-  *
-  * @param n
-  *   is the number of fanned outputs for the routed packet
-  */
+ * one of n output ports
+ *
+ * @param n
+ * is the number of fanned outputs for the routed packet
+ */
 class RouterIO(val n: Int) extends Bundle {
   val read_routing_table_request = DeqIO(new ReadCmd())
   val read_routing_table_response = EnqIO(UInt(Router.addressWidth.W))
@@ -77,9 +77,9 @@ class RouterIO(val n: Int) extends Bundle {
 }
 
 /** routes packets by using their header as an index into an externally loaded
-  * and readable table, The number of addresses recognized does not need to
-  * match the number of outputs
-  */
+ * and readable table, The number of addresses recognized does not need to
+ * match the number of outputs
+ */
 class Router extends Module {
   val depth: Int = Router.routeTableSize
   val n: Int = Router.numberOfOutputs

@@ -49,7 +49,8 @@ class Functionality extends Module {
 
   // This is a port that uses the clb function
   def clb(a: UInt, b: UInt, c: UInt, d: UInt) =
-  (a & b) | (~c & d)
+    (a & b) | (~c & d)
+
   io.z_function := clb(io.x, io.y, io.x, io.y)
 
 
@@ -62,6 +63,7 @@ class Functionality extends Module {
     def apply(a: UInt, b: UInt, c: UInt, d: UInt) =
       (a & b) | (~c & d)
   }
+
   io.z_object := CLB(io.x, io.y, io.x, io.y)
 
   // This is an equivalent logic of the clb function but it uses a class and not a function
@@ -69,6 +71,7 @@ class Functionality extends Module {
     def apply(a: UInt, b: UInt, c: UInt, d: UInt) =
       (a & b) | (~c & d)
   }
+
   val clb_class = new CLBClass
   io.z_class := clb_class(io.x, io.y, io.x, io.y)
 }

@@ -30,12 +30,12 @@ import circt.stage.ChiselStage
 class Adder(val n: Int, val print: Boolean = false) extends Module {
   // IO interface
   val io = IO(new Bundle {
-	val A = Input(UInt(n.W))
-	val B = Input(UInt(n.W))
-	val Cin = Input(UInt(1.W))
+    val A = Input(UInt(n.W))
+    val B = Input(UInt(n.W))
+    val Cin = Input(UInt(1.W))
 
-	val Sum = Output(UInt(n.W))
-	val Cout = Output(Bool())
+    val Sum = Output(UInt(n.W))
+    val Cout = Output(Bool())
   })
 
   val io_A = Wire(UInt(n.W))
@@ -70,12 +70,12 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
 
   // wire up the ports of the full adders
   for (i <- 0 until n) {
-	FAs(i).io.a := io.A(i)
-	FAs(i).io.b := io.B(i)
-	FAs(i).io.cin := carry(i)
-	carry(i + 1) := FAs(i).io.cout
-	sum(i) := FAs(i).io.sum.asBool
-	sum_2(i) := sum(i)
+    FAs(i).io.a := io.A(i)
+    FAs(i).io.b := io.B(i)
+    FAs(i).io.cin := carry(i)
+    carry(i + 1) := FAs(i).io.cout
+    sum(i) := FAs(i).io.sum.asBool
+    sum_2(i) := sum(i)
   }
 
   io.Sum := sum.asUInt
@@ -83,9 +83,9 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
 
   // For debugging purposes
   if (print) {
-	System.out.println(
-	  s"Adder: ${n} ${io.A.name} ${io.B.name} ${io.Cin.name} ${io.Sum.name} ${io.Cout.name}"
-	)
+    System.out.println(
+      s"Adder: ${n} ${io.A.name} ${io.B.name} ${io.Cin.name} ${io.Sum.name} ${io.Cout.name}"
+    )
   }
 }
 
@@ -96,8 +96,8 @@ object AdderVerilog extends App {
 
   // emit Verilog
   emitVerilog(
-	new Adder(n, print),
-	Array("--split-verilog", "--target-dir", outputDir)
+    new Adder(n, print),
+    Array("--split-verilog", "--target-dir", outputDir)
   )
 }
 
@@ -107,14 +107,14 @@ object AdderFIRRTL extends App {
   private val print = true
 
   val firrtl = ChiselStage.emitCHIRRTL(
-	new Adder(n, print),
-	//    Array("-td", outputDir)
+    new Adder(n, print)
+    //    Array("-td", outputDir)
   )
 
   // val thisDir = new java.io.File(".").getCanonicalPath
   val dir = new java.io.File(outputDir)
   if (!dir.exists()) {
-	dir.mkdir()
+    dir.mkdir()
   }
 
   val pw = new java.io.PrintWriter(new java.io.File(outputDir + "/Adder.fir"))
