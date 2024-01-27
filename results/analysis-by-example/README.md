@@ -11,6 +11,7 @@ This section aims to identify the weaknesses in the current representations with
   - [DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states](#detecttwoones-a-simple-finite-state-machine-that-uses-chiselenum-to-represent-the-states)
   - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
   - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
+  - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
 - [References](#references)
 
 
@@ -238,6 +239,27 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 | -------------------------------------------------------------------------- |
 | Fig. 8 - *Waveforms of the `Functionality` module*                         |
 
+## Memory: a simple memory module that wraps the `Mem` chisel module
+Chisel provides several constructs to represent memories[^5].
+The `Mem` module implements a random-access memory that with asynchronous read and synchronous write ports. 
+The `Memory` example serves to illustrate the `Mem` module representation in the testing tools.
+
+Fig. 9.1 and 9.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
+It is immediate to see that the treadle backend does not dump the whole memory content in a VCD, but only the read and write ports (called here `pipeline_data_0`).
+Thus, it is not possible to inspect the memory content at any time step, but only when a read or write operation is performed and completed successfully.
+By contrast, verilator provides a better representation of the content of the same memory block, although, memory arrays are not grouped together by default as visible in fig. 9.2. 
+Thus, large memories may be difficult to inspect in waveforms due to representation which is not as concise as it could be.
+
+| ![Memory waveforms](./images/memory/memory_waves_treadle.png)           | ![Memory waveforms](./images/memory/memory_waves_verilator.png)           |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Fig. 9.1 - *Waveforms of the `Memory` module using the treadle backend* | Fig. 9.2 - *Waveforms of the `Memory` module using the verilator backend* |
+
+In order to understand why the two backends produce different results, I inspected the RTL codes used by each backend.
+Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
+The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
+
+> **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
+
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)
 
@@ -246,3 +268,5 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 [^3]: *chisel3.util.Enum documentation* en. [![chisel3.util.Enum](https://img.shields.io/badge/Web_Page-chisel3.util.Enum-blue)](https://javadoc.io/static/edu.berkeley.cs/chisel3_2.12/3.3.0-RC1/chisel3/util/Enum.html)
 
 [^4]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
+
+[^5]: *Memories* | *Chisel*. en. [![memories-chisel](https://img.shields.io/badge/Web_Page-Memories_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/memories)
