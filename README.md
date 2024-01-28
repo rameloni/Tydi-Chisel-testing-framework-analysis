@@ -13,16 +13,14 @@ All these aspects are explored and discussed in the [results](results) section.
 
 # Tree repository index
 - [A collection of Chisel and Tydi-Chisel examples that support the analysis of the frameworks](examples)
-  - [Chisel examples](examples/chisel-examples): a list of examples of Chisel designs
+  - [Chisel examples](examples/chisel-examples)
     - [README.md](examples/chisel-examples/README.md): description of the examples
     - [src/main](examples/chisel-examples/src/main): source code of Chisel examples
     - [src/test](examples/chisel-examples/src/chiseltest): testbenches of Chisel examples
-  - [Tydi-Chisel code examples](examples/tydi-chisel-examples): a list of examples of Tydi-Chisel designs
+  - [Tydi-Chisel code examples](examples/tydi-chisel-examples)
     - [README.md](examples/tydi-chisel-examples/README.md): description of the examples
     - [tydi](examples/tydi-chisel-examples/tydi): source tydi code of Tydi-Chisel examples
-    - [chisel](examples/tydi-chisel-examples/chisel)  
-      - [src/main](examples/tydi-chisel-examples/chisel/src/main): source code of Tydi-Chisel examples
-      - [src/test](examples/tydi-chisel-examples/chisel/src/test): testbenches of Tydi-Chisel examples
+    - [chisel](examples/tydi-chisel-examples/chisel): source chisel code of Tydi-Chisel examples
 - [Tool analysis results](results): outcomes of the analysis
   - [An analysis of the features of chiseltest: a testing framework for Chisel and Chisel-related projects](results/chiseltest)
   - [hgdb](results/hgdb): analysis of hgdb debugger
