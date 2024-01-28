@@ -12,6 +12,7 @@ This section aims to identify the weaknesses in the current representations with
   - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
   - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
   - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
+  - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
 - [References](#references)
 
 
@@ -259,6 +260,53 @@ Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
 The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
 
 > **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
+
+## Router: using chisel "typed" abstraction to represent circtuit components and characteristics
+The `Router` is the most complex among the selected examples.
+It uses classes and objects to represent and implement its components and characteristics.
+For example, an `object` at the top of the file is used to group the main characteristics of the router, providing a parametrized implementation. This can be viewed similar to parameters in Verilog modules.
+Moreover, Chisel allows to raise even more the abstraction level of a circuit: in this specific example, classes to describe read/write commands and packets are used, this means that the router is not composed by bare wires and registers, but chisel offers a virtual view of the circuit components.
+
+The following code snippet contains the class used for the IO interface and shows this abstraction level. As it can be seen, from the code perspective, the `in` and `outs` port are of `Packet` type. Similarly, the `read_routing_table_request` and `load_routing_table_request` are of `ReadCmd` and `WriteCmd` type respectively. This means that the router is not composed by bare wires and registers, but chisel offers a virtual view of such "types".
+```scala
+class RouterIO(val n: Int) extends Bundle {
+
+  val read_routing_table_request: DecoupledIO[ReadCmd] = DeqIO(new ReadCmd())
+  val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))
+  val load_routing_table_request: DecoupledIO[WriteCmd] = DeqIO(new WriteCmd())
+
+  val in: DecoupledIO[Packet] = DeqIO(new Packet())
+  val outs: Vec[DecoupledIO[Packet]] = Vec(n, EnqIO(new Packet()))
+}
+```
+
+Fig. 10 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
+First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it used to specify the router sizes.
+When the designer writes their blocks, they just use the actual values through the defined parameters (i.e. `val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))`)
+Furthermore, there is no information related to what signals are related to a Packet, WriteCmd or ReadCmd. Every type declared as a class is decomposed in its fields and represented as separate signals.
+
+Taking into account the `ReadCmd` and `WriteCmd` classes, it is trivial to understand why this is an issue.
+```scala
+class ReadCmd extends Bundle {
+  val address = UInt(Router.addressWidth.W)
+}
+class WriteCmd extends ReadCmd {
+  val data = UInt(Router.dataWidth.W)
+}
+```
+Those classes have a common field `address`: looking at the figure, understanding whether `io_trad_routing_table_response` is a `ReadCmd` or not is far from trivial if only the waveforms (no comments, no code) are taken into account.
+
+
+
+| ![Router waveforms from treadle](./images/router/router_treadle_waves.png) |
+| -------------------------------------------------------------------------- |
+| Fig. 10 - *Waveforms of the `Router` module using the treadle backend*     |
+
+
+Fig. 11 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+| ![Router waveforms from treadle with grouped signals](./images/router/router_treadle_waves_grouped.png)                       |
+| ----------------------------------------------------------------------------------------------------------------------------- |
+| Fig. 11 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)

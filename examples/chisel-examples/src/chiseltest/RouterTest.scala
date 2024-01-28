@@ -62,13 +62,13 @@ class RouterTester(c: Router, packetToSend: Int = 1) {
     println(s"rout_packet $header $body should go to out($routed_to)")
   }
 
-  def apply() = {
+  def apply(): Unit = {
 
     initRouter()
 
     // load routing table, confirm each write as built
     for (i <- 0 until Router.numberOfOutputs) {
-      writeRoutingTableWithConfirm(i, (i + 1) % Router.numberOfOutputs)
+      writeRoutingTableWithConfirm(addr = i, data = (i + 1) % Router.numberOfOutputs)
     }
 
     // check them in reverse order just for fun
@@ -111,7 +111,7 @@ class RouterTester(c: Router, packetToSend: Int = 1) {
 }
 
 object RouterTester {
-  def apply(c: Router, packetToSend: Int = 1) = {
+  def apply(c: Router, packetToSend: Int = 1): Unit = {
     new RouterTester(c, packetToSend = packetToSend).apply()
   }
 }

@@ -38,7 +38,7 @@ package chiselexamples
 package parameterized
 
 import chisel3._
-import chisel3.util.{DeqIO, EnqIO, log2Ceil}
+import chisel3.util.{DecoupledIO, DeqIO, EnqIO, log2Ceil}
 import circt.stage.ChiselStage
 
 object Router {
@@ -46,20 +46,21 @@ object Router {
   val dataWidth = 64
   val headerWidth = 8
   val routeTableSize = 16
-  val numberOfOutputs = 10
+  val numberOfOutputs = 4
 }
 
 class ReadCmd extends Bundle {
-  val addr = UInt(Router.addressWidth.W)
+  val addr: UInt = UInt(Router.addressWidth.W)
 }
 
 class WriteCmd extends ReadCmd {
-  val data = UInt(Router.addressWidth.W)
+  // The addr is inherited from ReadCmd
+  val data: UInt = UInt(Router.addressWidth.W)
 }
 
 class Packet extends Bundle {
-  val header = UInt(Router.headerWidth.W)
-  val body = UInt(Router.dataWidth.W)
+  val header: UInt = UInt(Router.headerWidth.W)
+  val body: UInt = UInt(Router.dataWidth.W)
 }
 
 class AnotherPacket extends Bundle {
@@ -75,11 +76,12 @@ class AnotherPacket extends Bundle {
  */
 class RouterIO(val n: Int) extends Bundle {
 
-  val read_routing_table_request = DeqIO(new ReadCmd())
-  val read_routing_table_response = EnqIO(UInt(Router.addressWidth.W))
-  val load_routing_table_request = DeqIO(new WriteCmd())
-  val in = DeqIO(new Packet())
-  val outs = Vec(n, EnqIO(new Packet()))
+  val read_routing_table_request: DecoupledIO[ReadCmd] = DeqIO(new ReadCmd())
+  val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))
+  val load_routing_table_request: DecoupledIO[WriteCmd] = DeqIO(new WriteCmd())
+
+  val in: DecoupledIO[Packet] = DeqIO(new Packet())
+  val outs: Vec[DecoupledIO[Packet]] = Vec(n, EnqIO(new Packet()))
 
   //  val anotherOut = Vec(n, EnqIO(new AnotherPacket()))
 }
@@ -91,8 +93,8 @@ class RouterIO(val n: Int) extends Bundle {
 class Router extends Module {
   val depth: Int = Router.routeTableSize
   val n: Int = Router.numberOfOutputs
-  val io = IO(new RouterIO(n))
-  val table = Mem(depth, UInt(BigInt(n).bitLength.W))
+  val io: RouterIO = IO(new RouterIO(n))
+  val table: Mem[UInt] = Mem(depth, UInt(BigInt(n).bitLength.W))
 
   // These ensure all output signals are driven.
   io.read_routing_table_request.nodeq()
@@ -121,8 +123,8 @@ class Router extends Module {
       printf("setting tbl(%d) to %d\n", cmd.addr, cmd.data)
     }
     .elsewhen(io.in.valid) {
-      val packet = io.in.bits
-      val idx = table(packet.header(log2Ceil(Router.routeTableSize), 0))
+      val packet: Packet = io.in.bits
+      val idx: UInt = table(packet.header(log2Ceil(Router.routeTableSize), 0))
       when(io.outs(idx).ready) {
         io.in.deq()
         io.outs(idx).enq(packet)
@@ -132,6 +134,16 @@ class Router extends Module {
           packet.body,
           table(packet.header)
         )
+
+        // Print the table
+        printf("table: [")
+        for (i <- 0 until table.length.toInt)
+          printf(cf"${table(i.U)}, ")
+        printf("]\n")
+        printf("idx:   [")
+        for (i <- 0 until table.length.toInt)
+          printf(cf"${i.U}, ")
+        printf("]\n")
       }
     }
 
