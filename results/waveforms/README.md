@@ -1,4 +1,4 @@
-# An analysis of the waveforms produced by Chisel test benches
+# An analysis of the waveforms produced by Chisel testbenches
 This [page](../chiseltest/) explored advantages and drawbacks of chiseltest[^1]. 
 The framework allows to dump trace files (through `withAnnotations()`) that can be used by waveform viewers to inspect the signals of the circuit under test. 
 

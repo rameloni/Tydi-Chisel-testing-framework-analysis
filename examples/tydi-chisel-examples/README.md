@@ -14,10 +14,10 @@ The `tydi-chisel-examples` is organized as follows:
 - The [chisel](./chisel) subfolder contains the corresponding Tydi-Chisel code example.
 
 All the examples are related each other and they have an increasing complexity.
-- [`HelloWorldRgb`](./tydi/src/HelloWorldRgb/): A simple example that instantiates two streams of group `Rgb`. It is one of the simplest examples that can be used. It simply connects inputs to outputs.
-- [`PixelConverter`](./tydi/src/PixelConverter/): It extends the `HelloWorldRgb` example by adding more complex data structures that uses `Union`s (similar to software `enum`s) and `Groups` (similar to software `struct`s). It implements a color scale converter from rgb to grayscale and viceversa. Depending on what type is the input stream since can be either rgb or gray it converts its input to the other color-scale. Moreover, it shows how to use tydi-lang templates to define custom and reusable types.
-- [`CLikeStaticArray`](./tydi/src/CLikeStaticArray/): It shows how to use advanced tydi-lang features such as the usage of for loops to instantiate fields in groups/unions/streamlets.
-- [`PipelineSimple`](./tydi/src/PipelineSimple/): A simple streaming pipeline that implements the following simple spark code, where the input is a stream of integers with timestamps attached (`{time: unsigned Integer, value: Integer}`):
+- [HelloWorldRgb](./tydi/src/HelloWorldRgb/): A simple example that instantiates two streams of group `Rgb`. It is one of the simplest examples that can be used. It simply connects inputs to outputs.
+- [PixelConverter](./tydi/src/PixelConverter/): It extends the `HelloWorldRgb` example by adding more complex data structures that uses `Union`s (similar to software `enum`s) and `Groups` (similar to software `struct`s). It implements a color scale converter from rgb to grayscale and viceversa. Depending on what type is the input stream since can be either rgb or gray it converts its input to the other color-scale. Moreover, it shows how to use tydi-lang templates to define custom and reusable types.
+- [CLikeStaticArray](./tydi/src/CLikeStaticArray/): It shows how to use advanced tydi-lang features such as the usage of for loops to instantiate fields in groups/unions/streamlets.
+- [PipelineSimple](./tydi/src/PipelineSimple/): A simple streaming pipeline that implements the following simple spark code, where the input is a stream of integers with timestamps attached (`{time: unsigned Integer, value: Integer}`):
   ```scala
   // Input stream: {timestamp, value}
   // Output stream: {min_value, max_value, sum_value, avg_value}
@@ -32,7 +32,7 @@ All the examples are related each other and they have an increasing complexity.
       .select("min_value", "max_value", "sum_value", "avg_value")
         
   ```
-- [`PipelineNestedGroup`](./tydi/src/PipelineNestedGroup/): It extends the `PipelineSimple` by adding a nested group to the input stream (`{time: unsigned Integer, value: Integer, date: DateTime}`). The `DateTime` can be considered as `{month: unsigned Integer, day: unsigned Integer, year: unsigned Integer, utc: Integer}`. It filters every date that is not in the Amsterdam time zone (UTC+1) and every value that is negative. The corresponding spark code is the following:
+- [PipelineNestedGroup](./tydi/src/PipelineNestedGroup/): It extends the `PipelineSimple` by adding a nested group to the input stream (`{time: unsigned Integer, value: Integer, date: DateTime}`). The `DateTime` can be considered as `{month: unsigned Integer, day: unsigned Integer, year: unsigned Integer, utc: Integer}`. It filters every date that is not in the Amsterdam time zone (UTC+1) and every value that is negative. The corresponding spark code is the following:
   ```scala
   // Input stream: {timestamp, value, date}
   // Output stream: {min_value, max_value, sum_value, avg_value}
@@ -46,7 +46,7 @@ All the examples are related each other and they have an increasing complexity.
           )
       .select("min_value", "max_value", "sum_value", "avg_value")
   ```
-- [`PipelineNestedStreams`](./tydi/src/PipelineNestedStream/): It introduces the concept of nested streams to the `PipelineNestedGroup` example. Specifically, it associates a string (of undefined length) to the input and output streams. A string can be seen as sequence of `char`s and in hardware it can be represented by a stream of `char`s. Since its length is unknown, neither static arrays nor groups can represent it. The corresponding spark code is the following:
+- [PipelineNestedStreams](./tydi/src/PipelineNestedStream/): It introduces the concept of nested streams to the `PipelineNestedGroup` example. Specifically, it associates a string (of undefined length) to the input and output streams. A string can be seen as sequence of `char`s and in hardware it can be represented by a stream of `char`s. Since its length is unknown, neither static arrays nor groups can represent it. The corresponding spark code is the following:
   ```scala
   // Input stream: {timestamp, value, date, string}
   // Output stream: {min_value, max_value, sum_value, avg_value, string}
