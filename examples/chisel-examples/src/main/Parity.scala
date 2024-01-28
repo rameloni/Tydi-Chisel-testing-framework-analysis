@@ -18,20 +18,29 @@ import chisel3._
 import chisel3.util.Enum
 import circt.stage.ChiselStage
 
+// Check if the sequence of input 1's is even or odd
 class Parity extends Module {
   val io = IO(new Bundle {
     val in = Input(Bool())
     val out = Output(Bool())
   })
+
   val s_even :: s_odd :: Nil = Enum(2)
   val state = RegInit(s_even)
+
+  // State logic
   when(io.in) {
-    when(state === s_even) { state := s_odd }
-      .otherwise { state := s_even }
+    when(state === s_even) {
+      state := s_odd
+    }
+      .otherwise {
+        state := s_even
+      }
   }
+
+  // Output logic
   io.out := (state === s_odd)
 }
-
 
 
 object ParityVerilog extends App {
