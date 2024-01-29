@@ -21,6 +21,8 @@ This section aims to identify the weaknesses in the current representations with
     - [Memory in waveforms](#memory-in-waveforms)
     - [Memory in HGDB](#memory-in-hgdb)
   - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
+    - [Router in waveforms](#router-in-waveforms)
+    - [ROUTER in HGDB](#router-in-hgdb)
 - [References](#references)
 
 
@@ -302,6 +304,7 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 ### Functionality in HGDB
 
 - Similar to the waveforms there is no differenc between the 5 type assignments.
+
 | ![Functionality in HGDB](./images/functionality/functionality_hgdb.png)  |
 | ------------------------------------------------------------------------ |
 | Fig. 12 - *Functionality in HGDB using the verilator backend simulation* |
@@ -355,7 +358,9 @@ class RouterIO(val n: Int) extends Bundle {
 }
 ```
 
-Fig. 10 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
+### Router in waveforms
+
+Fig. 15 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
 First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it used to specify the router sizes.
 When the designer writes their blocks, they just use the actual values through the defined parameters (i.e. `val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))`)
 Furthermore, there is no information related to what signals are related to a Packet, WriteCmd or ReadCmd. Every type declared as a class is decomposed in its fields and represented as separate signals.
@@ -372,16 +377,26 @@ class WriteCmd extends ReadCmd {
 Those classes have a common field `address`: looking at the figure, understanding whether `io_trad_routing_table_response` is a `ReadCmd` or not is far from trivial if only the waveforms (no comments, no code) are taken into account.
 
 
-
 | ![Router waveforms from treadle](./images/router/router_treadle_waves.png) |
 | -------------------------------------------------------------------------- |
-| Fig. 10 - *Waveforms of the `Router` module using the treadle backend*     |
+| Fig. 15 - *Waveforms of the `Router` module using the treadle backend*     |
 
 
-Fig. 11 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+Fig. 16 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+
 | ![Router waveforms from treadle with grouped signals](./images/router/router_treadle_waves_grouped.png)                       |
 | ----------------------------------------------------------------------------------------------------------------------------- |
-| Fig. 11 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
+| Fig. 16 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
+
+### ROUTER in HGDB
+
+- Also here, no reference to the Router characteristics (i.e. `Router.addressWidth` and `Router.dataWidth`)
+- No information about `Packet`, `ReadCmd` and `WriteCmd` types. This can be only inspected by looking at the fields and at the code: for example `load_routing_table` appears as an obkect with fields `bits.addr`, `bits.data`, `ready` and `valid`.
+- Everything is `Object` if contains some nested fields, otherwise it is a numeric type (no information if `UInt`, `Bool`... or width)
+
+| ![Router in HGDB](./images/router/router_hgdb.png)                |
+| ----------------------------------------------------------------- |
+| Fig. 17 - *Router in HGDB using the verilator backend simulation* |
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)
