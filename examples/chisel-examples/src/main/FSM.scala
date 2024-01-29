@@ -26,6 +26,7 @@ class DetectTwoOnes extends Module {
   val io = IO(new Bundle {
     val in = Input(Bool())
     val out = Output(Bool())
+    val inDebug = Output(Bool())
   })
 
   object State extends ChiselEnum {
@@ -34,6 +35,7 @@ class DetectTwoOnes extends Module {
 
   val state = RegInit(State.sNone)
 
+  io.inDebug := io.in // This is needed to make hgdb able to stop at the breakpoint, breakpoints in the states won't work
   io.out := (state === State.sTwo1s)
 
   switch(state) {

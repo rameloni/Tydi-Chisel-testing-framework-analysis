@@ -21,7 +21,7 @@ protected class Emit[T <: RawModule](
 
   def verilog(): Unit = {
     // emit Verilog
-    emitVerilog(
+    ChiselStage.emitSystemVerilogFile(
       module(),
       Array("--split-verilog", "--target-dir", outputDirVerilog)
     )
