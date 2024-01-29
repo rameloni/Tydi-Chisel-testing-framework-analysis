@@ -15,6 +15,8 @@ This section aims to identify the weaknesses in the current representations with
     - [2.2. DetectTwoOnes in HGDB](#22-detecttwoones-in-hgdb)
   - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
   - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
+    - [Functionality in waveforms](#functionality-in-waveforms)
+    - [Functionality in HGDB](#functionality-in-hgdb)
   - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
   - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
 - [References](#references)
@@ -169,7 +171,9 @@ In `Adder` simulated by Icarus (fig. 6.1 and 6.2):
 - Only the hierarchy of bundles and vec can be fully inspected
 - No access or reference from top modules to submodules. I did not find a way to step into, so if I want to inspect signals of a submodule I need to place breakpoint in one of its line (fig. 6.2).
 - Fig. 6.2. reveals another issue: there is no reference to internal `val`s of a module. There are only references to chisel hardware types (i.e. `carry` in `Adder`) and no way to inspect thema  from the debugger (this also happened for the waveforms).
-- No information about the signals width.
+- No information about the signals width, no information about wire/reg
+- io is not detected to be a bundle
+- No information about the type of the signals (i.e. UInt, Vec, Bundle, etc...)
 
 | ![Adder in HGDB](./images/adder/adder_hgdb_icarus.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_icarus.png) |
 | --------------------------------------------------------- | -------------------------------------------------------------- |
@@ -280,7 +284,9 @@ In particular, the example includes the following types of assignment:
   io.z_class := clb_class(io.x, io.y, io.x, io.y)
   ```
 
-Fig. 8 illustrates the waveforms from a testbench of the Functionality module.
+### Functionality in waveforms
+
+Fig. 11 illustrates the waveforms from a testbench of the Functionality module.
 They shows that there is no difference between the 5 type assignments.
 This is expected since the actual ports are of a `UInt` type, that is the only information passed to the backend.
 Nonetheless, while dealing with chisel code, it would be useful to have a recall of what is the driving logic of a signal.
@@ -289,7 +295,14 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 
 | ![Functionality waveforms](./images/functionality/functionality_waves.png) |
 | -------------------------------------------------------------------------- |
-| Fig. 8 - *Waveforms of the `Functionality` module*                         |
+| Fig. 11 - *Waveforms of the `Functionality` module*                        |
+
+### Functionality in HGDB
+
+- Similar to the waveforms there is no differenc between the 5 type assignments.
+| ![Functionality in HGDB](./images/functionality/functionality_hgdb.png)  |
+| ------------------------------------------------------------------------ |
+| Fig. 12 - *Functionality in HGDB using the verilator backend simulation* |
 
 ## Memory: a simple memory module that wraps the `Mem` chisel module
 Chisel provides several constructs to represent memories[^5].
