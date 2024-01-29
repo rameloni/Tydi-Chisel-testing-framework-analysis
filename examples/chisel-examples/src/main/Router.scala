@@ -152,31 +152,26 @@ class Router extends Module {
 
 
 object RouterVerilog extends App {
-  private val outputDir = "output/router/verilog"
-
-  // emit Verilog
-  emitVerilog(
-    new Router(),
-    Array("--target-dir", outputDir, "--split-verilog")
-  )
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).verilog()
 }
 
 object RouterFIRRTL extends App {
-  private val outputDir = "output/router/firrtl"
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).firrtl()
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new Router(),
-  )
+}
 
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw =
-    new java.io.PrintWriter(new java.io.File(outputDir + "/Router.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object RouterGenerateHGDB extends App {
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).hgdbOutputs()
 }

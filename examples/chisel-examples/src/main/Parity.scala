@@ -44,31 +44,26 @@ class Parity extends Module {
 
 
 object ParityVerilog extends App {
-  private val outputDir = "output/parity/verilog"
-
-  // emit Verilog
-  emitVerilog(
-    new Parity(),
-    Array("--target-dir", outputDir, "--split-verilog")
-  )
+  Emit(
+    "out/parity",
+    () => new Parity(),
+    "Parity"
+  ).verilog()
 }
 
 object ParityFIRRTL extends App {
-  private val outputDir = "output/parity/firrtl"
+  Emit(
+    "out/parity",
+    () => new Parity(),
+    "Parity"
+  ).firrtl()
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new Parity(),
-  )
+}
 
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw =
-    new java.io.PrintWriter(new java.io.File(outputDir + "/Parity.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object ParityHGDB extends App {
+  Emit(
+    "out/parity",
+    () => new Parity(),
+    "Parity"
+  ).hgdbOutputs()
 }

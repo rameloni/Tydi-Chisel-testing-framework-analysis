@@ -77,32 +77,26 @@ class Functionality extends Module {
 }
 
 object FunctionalityVerilog extends App {
-  private val outputDir = "output/functionality/verilog"
-
-  // emit Verilog
-  emitVerilog(
-    new Functionality(),
-    Array("--target-dir", outputDir)
-  )
+  Emit(
+    "output/functionality",
+    () => new Functionality(),
+    "Functionality"
+  ).verilog()
 }
 
 object FunctionalityFIRRTL extends App {
-  private val outputDir = "output/functionality/firrtl"
+  Emit(
+    "output/functionality",
+    () => new Functionality(),
+    "Functionality"
+  ).firrtl()
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new Functionality(),
-    // Array("--target-dir", outputDir)
-  )
+}
 
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw =
-    new java.io.PrintWriter(new java.io.File(outputDir + "/Functionality.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object FunctionalityGenerateHGDB extends App {
+  Emit(
+    "output/functionality",
+    () => new Functionality(),
+    "Functionality"
+  ).hgdbOutputs()
 }
