@@ -45,7 +45,7 @@ class Parity extends Module {
 
 object ParityVerilog extends App {
   Emit(
-    "out/parity",
+    "output/parity",
     () => new Parity(),
     "Parity"
   ).verilog()
@@ -53,7 +53,7 @@ object ParityVerilog extends App {
 
 object ParityFIRRTL extends App {
   Emit(
-    "out/parity",
+    "output/parity",
     () => new Parity(),
     "Parity"
   ).firrtl()
@@ -62,7 +62,7 @@ object ParityFIRRTL extends App {
 
 object ParityHGDB extends App {
   Emit(
-    "out/parity",
+    "output/parity",
     () => new Parity(),
     "Parity"
   ).hgdbOutputs()

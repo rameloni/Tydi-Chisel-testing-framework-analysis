@@ -243,7 +243,7 @@ Similarly to the previous example, `Parity` uses an enumeration to encode its st
 
 Analogously to `ChiselEnum`, `Enum` hides the actual numeric value of its variants.
 However, a look to its documentation[^3] reveals that `Enum` directly implements a ist of unique `UInt` constants.
-Consequently, the waveform viewers print out numeric values without any reference to the enumeration variant name.
+Consequently, the waveform viewers and hgdb print out numeric values without any reference to the enumeration variant name.
 
 ## Functionality: assign values to wires through different methods
 The `Functionality` example shows how different methods to assign values to wires affect the waveform representation.
