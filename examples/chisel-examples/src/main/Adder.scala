@@ -1,5 +1,5 @@
 // See LICENSE.txt for license details.
-/*
+/**
  * Code from: https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples
  *
  * Modified by: rameloni
@@ -89,36 +89,66 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
   }
 }
 
-object AdderVerilog extends App {
-  private val outputDir = "output/adder/verilog"
-  val n = 4
+object AdderEmit {
+  private val n = 5
   private val print = true
+  private val outputDirVerilog = "output/adder/verilog"
+  private val outputDirFirrtl = "output/adder/firrtl"
+  private val outputDirHGDB = "output/adder/hgdb"
 
-  // emit Verilog
-  emitVerilog(
-    new Adder(n, print),
-    Array("--split-verilog", "--target-dir", outputDir)
-  )
+  private val nameFirrtl = "Adder.fir"
+
+  def verilog(): Unit = {
+    // emit Verilog
+    emitVerilog(
+      new Adder(n, print),
+      Array("--split-verilog", "--target-dir", outputDirVerilog)
+    )
+  }
+
+  def firrtl(): Unit = {
+    val firrtl = ChiselStage.emitCHIRRTL(
+      new Adder(n, print)
+    )
+    val dir = new java.io.File(outputDirFirrtl)
+    if (!dir.exists())
+      dir.mkdir()
+
+    val pw = new java.io.PrintWriter(new java.io.File(outputDirFirrtl + "/" + nameFirrtl))
+    pw.close()
+    pw.write(firrtl)
+  }
+
+  import sys.process._
+
+  /**
+   * ! This requires the hgdb-firrtl and toml2hgdb to be installed
+   */
+  def hgdbOutputs(): Unit = {
+    // Emit first the firrtl file
+    // firrtl()
+
+    if (!new java.io.File(outputDirHGDB).exists())
+      new java.io.File(outputDirHGDB).mkdir()
+    // Generate the hgdb outputs
+    val hgdbFirrtlCmd =
+      "hgdb-firrtl -i " + outputDirFirrtl + "/" + nameFirrtl + " --hgdb-toml " + outputDirHGDB + "/Adder.toml"
+    hgdbFirrtlCmd.!
+
+    val toml2hgdb =
+      "toml2hgdb " + outputDirHGDB + "/Adder.toml " + outputDirHGDB + "/Adder.db"
+    toml2hgdb.!
+  }
+}
+
+object AdderVerilog extends App {
+  AdderEmit.verilog()
 }
 
 object AdderFIRRTL extends App {
-  private val outputDir = "output/adder/firrtl"
-  val n = 5
-  private val print = true
+  AdderEmit.firrtl()
+}
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new Adder(n, print)
-    //    Array("-td", outputDir)
-  )
-
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw = new java.io.PrintWriter(new java.io.File(outputDir + "/Adder.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object AdderGenerateHGDB extends App {
+  AdderEmit.hgdbOutputs()
 }

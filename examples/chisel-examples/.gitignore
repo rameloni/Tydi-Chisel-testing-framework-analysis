@@ -3,3 +3,4 @@ output/
 
 # Chiseltest generated files
 test_run_dir/
+test_run_hgdb/

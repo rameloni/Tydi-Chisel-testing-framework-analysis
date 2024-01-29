@@ -7,8 +7,10 @@ This section aims to identify the weaknesses in the current representations with
 > **Note:** Source code of the examples is available in the [examples](../../examples/) directory.
 
 - [A detailed analysis of Tydi-Chisel representations in testing frameworks](#a-detailed-analysis-of-tydi-chisel-representations-in-testing-frameworks)
-  - [Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules](#adder-a-parametrized-module-that-uses-bundlevec-and-array-to-group-signals-and-instantiate-multiple-modules)
-  - [DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states](#detecttwoones-a-simple-finite-state-machine-that-uses-chiselenum-to-represent-the-states)
+  - [1. Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules](#1-adder-a-parametrized-module-that-uses-bundlevec-and-array-to-group-signals-and-instantiate-multiple-modules)
+    - [1.1. Adder in waveforms](#11-adder-in-waveforms)
+    - [1.2. Adder in HGDB](#12-adder-in-hgdb)
+  - [2. DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states](#2-detecttwoones-a-simple-finite-state-machine-that-uses-chiselenum-to-represent-the-states)
   - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
   - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
   - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
@@ -16,7 +18,7 @@ This section aims to identify the weaknesses in the current representations with
 - [References](#references)
 
 
-## Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
+## 1. Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
 Chisel provides the `Bundle` and `Vec`[^1] classes to group signals together of different and same type respectively. 
 Their elements can be accessed as named fields for `Bundle` and as indexed elements for `Vec`, similar to software `struct`/`class` and `array`.
 
@@ -73,6 +75,8 @@ The previous code snippets illustrate how a developer can declare, access, and m
 These basic constructs arise the abstraction level when compared to low-level HDLs and allow to orgnaize the code in a more structured and concise format.
 In languages like Verilog, concepts similar to `Bundle` and `Array` of modules do not exist, despite the presence of bit vectors and arrays of bits (`Vec`).
 
+### 1.1. Adder in waveforms
+
 Fig. 1 shows a bundle representation in waveforms.
 In contrast to its chisel access. Its elements are not grouped by default under an `io` group and they are not represented as named fields. 
 Yet, they are drawn as separate parallel signals and the parent bundle name can be retrieved from the signal name convention (`bundleName_signalName`). 
@@ -86,7 +90,7 @@ Indeed, vector elements are not grouped and displayed as indexed arrays, but the
 Similarly to bundle the actual chisel `val` can be retrived from the signal name followed by an underscore and index (`name_i`).
 Using `UInt(n.W)` instead of `Vec(n, UInt(1.W))` produces a different waveform representation more similar to a vector (see io_A in fig. 3). 
 However, `UInt` cannot be indexed in chisel.
-Hence, it is not possible to access individual bits of a `val carr = Wire(UInt((n+1).W))` in the same way as `val carry = Wire(Vec(n + 1, UInt(1.W))))`.
+Hence, it is not possible to access individual bits of a `val carry = Wire(UInt((n+1).W))` in the same way as `val carry = Wire(Vec(n + 1, UInt(1.W))))`.
 
 | ![Adder Vec signals](./images/adder/adder_vec.png)                      |
 | ----------------------------------------------------------------------- |
@@ -130,7 +134,7 @@ The code snippet below and fig. 5 provide another example of naming issues. Here
 From fig. 5 it is counterintuitive to understand wether the `FullAdder` is used for the module `FAs(0)` or for the wire `FullAdder`. Similarly, it is impossible to establish if `FullAdder_5` is whether the 5th element of the array `FAs` or just a separate module `FullAdder_5`.
 
 Going more in depth, this example shows additional problems:
-- the name `FullAdder_5` in waveforms corresponds to `FullAdder` in chisel
+- the name `FullAdder_5` in waveforms corresponds (incorrectly) to `FullAdder` in chisel
 - `FullAdder_5_1` is related to the `FullAdder_5` module
 
 <!-- This method that maps sub-elements of `Bundle`, `Vec` and `Array` to names followed by underscore and index/field name is  -->
@@ -148,7 +152,37 @@ val FullAdder_5 = Module(new FullAdder())
 | --------------------------------------------------------------------------------------------- |
 | Fig. 5 - *Another example in which some signal names in chisel causes confusion in waveforms* |
 
-## DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states
+### 1.2. Adder in HGDB
+
+In `Adder` simulated by Icarus (fig. 6.1 and 6.2):
+- Elements of a bundle are grouped under the bundle name (i.e. `io`) and shown as named fields.
+- Vec elements are grouped as an array of signals, however it still has some issues. Using Carry as example:
+  - It is shown to be an array (even though it is more properly a Vec in chisel)
+  - It has an overcomplicated structure. Carry is simply a Vector of UInts, but it can be seen (from the debugger) that it has clock, dumpfile etc. and aslo references to io signals.
+  - Inspect its values is not possible. As shown in fig. 6.1, an Error value is displayed.
+  - Similar results for `sum` 
+- However another vector is shown properly (`sum_2`), it is correctly represented as an array (even though it is actually a Vec) of UInts. Integer values are shown instead of not Error.
+- There is no issue related to the naming as happened in the waveform representations:
+  - for example, the third element of `sum` is `sum[2]` while the field `A` of `io` is inspected as a "child" of `io`. This removes the conflict, introduced by the vcd dump from chiseltest, with the other signals `io_A` and `sum_2`.
+- Only the hierarchy of bundles and vec can be fully inspected
+- No access or reference from top modules to submodules. I did not find a way to step into, so if I want to inspect signals of a submodule I need to place breakpoint in one of its line (fig. 6.2).
+- Fig. 6.2. reveals another issue: there is no reference to internal `val`s of a module. There are only references to chisel hardware types (i.e. `carry` in `Adder`) and no way to inspect thema  from the debugger (this also happened for the waveforms).
+
+| ![Adder in HGDB](./images/adder/adder_hgdb_icarus.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_icarus.png) |
+| --------------------------------------------------------- | -------------------------------------------------------------- |
+| Fig. 6.1 - *Adder in HGDB using icarus backend simulator* | Fig. 6.2 - *FullAdder in HGDB using icarus backend simulator*  |
+
+In `Adder` simulated by Verilator (fig. 7.1 and 7.2), some differences from Icarus:
+- Vec elements as `carry` and `sum` are properly represented without any additional (non existing) sub-information.
+- However, `Error` is displayed for those signals.
+
+| ![Adder in HGDB](./images/adder/adder_hgdb_verilator.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_verilator.png) |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Fig. 7.1 - *Adder in HGDB using verilator backend simulator* | Fig. 7.2 - *FullAdder in HGDB using verilator backend simulator*  |
+
+Finally, the icarus crashes after the second step of simulation is performed, while verilator does not even though it deadlocks if step into is used.
+
+## 2. DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states
 `DetectTwoOnes` is an example FSM that uses enumerations to encode its state. 
 Chisel provides two ways to represent enumerations: `ChiselEnum` and `Enum`.
 The first is used in this circuit while the second is used in the next example.

@@ -7,6 +7,7 @@ import chiseltest.iotesters.PeekPokeTester
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3.reflect.DataMirror
 import chiselexamples.adder.modulewrapper.{AdderWrapperByInheritance, AdderWrapperByParameter}
+import sys.process._
 
 // Class to add two n-bit numbers
 class SwAdder(n: Int) {

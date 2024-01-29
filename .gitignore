@@ -58,3 +58,5 @@ project/**/metals.sbt
 
 *.class
 *.log
+
+*.db
