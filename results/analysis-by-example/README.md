@@ -18,6 +18,8 @@ This section aims to identify the weaknesses in the current representations with
     - [Functionality in waveforms](#functionality-in-waveforms)
     - [Functionality in HGDB](#functionality-in-hgdb)
   - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
+    - [Memory in waveforms](#memory-in-waveforms)
+    - [Memory in HGDB](#memory-in-hgdb)
   - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
 - [References](#references)
 
@@ -309,21 +311,30 @@ Chisel provides several constructs to represent memories[^5].
 The `Mem` module implements a random-access memory that with asynchronous read and synchronous write ports. 
 The `Memory` example serves to illustrate the `Mem` module representation in the testing tools.
 
-Fig. 9.1 and 9.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
+### Memory in waveforms
+Fig. 13.1 and 13.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
 It is immediate to see that the treadle backend does not dump the whole memory content in a VCD, but only the read and write ports (called here `pipeline_data_0`).
 Thus, it is not possible to inspect the memory content at any time step, but only when a read or write operation is performed and completed successfully.
 By contrast, verilator provides a better representation of the content of the same memory block, although, memory arrays are not grouped together by default as visible in fig. 9.2. 
 Thus, large memories may be difficult to inspect in waveforms due to representation which is not as concise as it could be.
 
-| ![Memory waveforms](./images/memory/memory_waves_treadle.png)           | ![Memory waveforms](./images/memory/memory_waves_verilator.png)           |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Fig. 9.1 - *Waveforms of the `Memory` module using the treadle backend* | Fig. 9.2 - *Waveforms of the `Memory` module using the verilator backend* |
+| ![Memory waveforms](./images/memory/memory_waves_treadle.png)            | ![Memory waveforms](./images/memory/memory_waves_verilator.png)            |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Fig. 13.1 - *Waveforms of the `Memory` module using the treadle backend* | Fig. 13.2 - *Waveforms of the `Memory` module using the verilator backend* |
 
 In order to understand why the two backends produce different results, I inspected the RTL codes used by each backend.
 Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
 The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
 
 > **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
+
+### Memory in HGDB
+
+- No information about the memory content
+- Similar to waveforms (fig. 13.1) only io ports are available
+| ![Memory in HGDB](./images/memory/memory_hgdb.png)                |
+| ----------------------------------------------------------------- |
+| Fig. 14 - *Memory in HGDB using the verilator backend simulation* |
 
 ## Router: using chisel "typed" abstraction to represent circtuit components and characteristics
 The `Router` is the most complex among the selected examples.

@@ -37,7 +37,7 @@ class Memory(val n: Int, val width: Int) extends Module {
 
 object MemoryVerilog extends App {
   Emit(
-    "out/memory",
+    "output/memory",
     () => new Memory(4, 32),
     "Memory"
   ).verilog()
@@ -45,7 +45,7 @@ object MemoryVerilog extends App {
 
 object MemoryFirrtl extends App {
   Emit(
-    "out/memory",
+    "output/memory",
     () => new Memory(4, 32),
     "Memory"
   ).firrtl()
@@ -53,7 +53,7 @@ object MemoryFirrtl extends App {
 
 object MemoryHGDB extends App {
   Emit(
-    "out/memory",
+    "output/memory",
     () => new Memory(4, 32),
     "Memory"
   ).hgdbOutputs()
