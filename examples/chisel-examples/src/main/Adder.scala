@@ -89,66 +89,27 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
   }
 }
 
-object AdderEmit {
-  private val n = 5
-  private val print = true
-  private val outputDirVerilog = "output/adder/verilog"
-  private val outputDirFirrtl = "output/adder/firrtl"
-  private val outputDirHGDB = "output/adder/hgdb"
-
-  private val nameFirrtl = "Adder.fir"
-
-  def verilog(): Unit = {
-    // emit Verilog
-    emitVerilog(
-      new Adder(n, print),
-      Array("--split-verilog", "--target-dir", outputDirVerilog)
-    )
-  }
-
-  def firrtl(): Unit = {
-    val firrtl = ChiselStage.emitCHIRRTL(
-      new Adder(n, print)
-    )
-    val dir = new java.io.File(outputDirFirrtl)
-    if (!dir.exists())
-      dir.mkdir()
-
-    val pw = new java.io.PrintWriter(new java.io.File(outputDirFirrtl + "/" + nameFirrtl))
-    pw.close()
-    pw.write(firrtl)
-  }
-
-  import sys.process._
-
-  /**
-   * ! This requires the hgdb-firrtl and toml2hgdb to be installed
-   */
-  def hgdbOutputs(): Unit = {
-    // Emit first the firrtl file
-    // firrtl()
-
-    if (!new java.io.File(outputDirHGDB).exists())
-      new java.io.File(outputDirHGDB).mkdir()
-    // Generate the hgdb outputs
-    val hgdbFirrtlCmd =
-      "hgdb-firrtl -i " + outputDirFirrtl + "/" + nameFirrtl + " --hgdb-toml " + outputDirHGDB + "/Adder.toml"
-    hgdbFirrtlCmd.!
-
-    val toml2hgdb =
-      "toml2hgdb " + outputDirHGDB + "/Adder.toml " + outputDirHGDB + "/Adder.db"
-    toml2hgdb.!
-  }
-}
 
 object AdderVerilog extends App {
-  AdderEmit.verilog()
+  Emit(
+    "output/adder",
+    () => new Adder(5, true),
+    "Adder"
+  ).verilog()
 }
 
 object AdderFIRRTL extends App {
-  AdderEmit.firrtl()
+  Emit(
+    "output/adder",
+    () => new Adder(5, true),
+    "Adder"
+  ).firrtl()
 }
 
 object AdderGenerateHGDB extends App {
-  AdderEmit.hgdbOutputs()
+  Emit(
+    "output/adder",
+    () => new Adder(5, true),
+    "Adder"
+  ).hgdbOutputs()
 }

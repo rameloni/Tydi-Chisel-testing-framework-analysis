@@ -120,7 +120,7 @@ class Router extends Module {
     .elsewhen(io.load_routing_table_request.valid) {
       val cmd = io.load_routing_table_request.deq()
       table(cmd.addr) := cmd.data
-      printf("setting tbl(%d) to %d\n", cmd.addr, cmd.data)
+//      printf("setting tbl(%d) to %d\n", cmd.addr, cmd.data)
     }
     .elsewhen(io.in.valid) {
       val packet: Packet = io.in.bits
@@ -128,22 +128,22 @@ class Router extends Module {
       when(io.outs(idx).ready) {
         io.in.deq()
         io.outs(idx).enq(packet)
-        printf(
-          "got packet to route header %d, data %d, being routed to out(%d)\n",
-          packet.header,
-          packet.body,
-          table(packet.header)
-        )
+//        printf(
+//          "got packet to route header %d, data %d, being routed to out(%d)\n",
+//          packet.header,
+//          packet.body,
+//          table(packet.header)
+//        )
 
-        // Print the table
-        printf("table: [")
-        for (i <- 0 until table.length.toInt)
-          printf(cf"${table(i.U)}, ")
-        printf("]\n")
-        printf("idx:   [")
-        for (i <- 0 until table.length.toInt)
-          printf(cf"${i.U}, ")
-        printf("]\n")
+//        // Print the table
+//        printf("table: [")
+//        for (i <- 0 until table.length.toInt)
+//          printf(cf"${table(i.U)}, ")
+//        printf("]\n")
+//        printf("idx:   [")
+//        for (i <- 0 until table.length.toInt)
+//          printf(cf"${i.U}, ")
+//        printf("]\n")
       }
     }
 
@@ -152,31 +152,26 @@ class Router extends Module {
 
 
 object RouterVerilog extends App {
-  private val outputDir = "output/router/verilog"
-
-  // emit Verilog
-  emitVerilog(
-    new Router(),
-    Array("--target-dir", outputDir, "--split-verilog")
-  )
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).verilog()
 }
 
 object RouterFIRRTL extends App {
-  private val outputDir = "output/router/firrtl"
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).firrtl()
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new Router(),
-  )
+}
 
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw =
-    new java.io.PrintWriter(new java.io.File(outputDir + "/Router.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object RouterGenerateHGDB extends App {
+  Emit(
+    "output/router",
+    () => new Router(),
+    "Router"
+  ).hgdbOutputs()
 }

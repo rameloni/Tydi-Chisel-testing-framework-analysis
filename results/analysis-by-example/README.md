@@ -11,10 +11,18 @@ This section aims to identify the weaknesses in the current representations with
     - [1.1. Adder in waveforms](#11-adder-in-waveforms)
     - [1.2. Adder in HGDB](#12-adder-in-hgdb)
   - [2. DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states](#2-detecttwoones-a-simple-finite-state-machine-that-uses-chiselenum-to-represent-the-states)
+    - [2.1. DetectTwoOnes in waveforms](#21-detecttwoones-in-waveforms)
+    - [2.2. DetectTwoOnes in HGDB](#22-detecttwoones-in-hgdb)
   - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
   - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
+    - [Functionality in waveforms](#functionality-in-waveforms)
+    - [Functionality in HGDB](#functionality-in-hgdb)
   - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
+    - [Memory in waveforms](#memory-in-waveforms)
+    - [Memory in HGDB](#memory-in-hgdb)
   - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
+    - [Router in waveforms](#router-in-waveforms)
+    - [ROUTER in HGDB](#router-in-hgdb)
 - [References](#references)
 
 
@@ -167,6 +175,9 @@ In `Adder` simulated by Icarus (fig. 6.1 and 6.2):
 - Only the hierarchy of bundles and vec can be fully inspected
 - No access or reference from top modules to submodules. I did not find a way to step into, so if I want to inspect signals of a submodule I need to place breakpoint in one of its line (fig. 6.2).
 - Fig. 6.2. reveals another issue: there is no reference to internal `val`s of a module. There are only references to chisel hardware types (i.e. `carry` in `Adder`) and no way to inspect thema  from the debugger (this also happened for the waveforms).
+- No information about the signals width, no information about wire/reg
+- io is not detected to be a bundle
+- No information about the type of the signals (i.e. UInt, Vec, Bundle, etc...)
 
 | ![Adder in HGDB](./images/adder/adder_hgdb_icarus.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_icarus.png) |
 | --------------------------------------------------------- | -------------------------------------------------------------- |
@@ -191,7 +202,6 @@ The ChiselEnum[^2] type is a chisel construct that helps limit errors when encod
 As shown in the code, the enum hide the actual numeric value of its variants, arising the abstraction level and improving safety.
 Two different ChiselEnum objects represent two different types.
 
-
 ```scala
   object State extends ChiselEnum {
     val sNone, sOne1, sTwo1s = Value
@@ -200,33 +210,48 @@ Two different ChiselEnum objects represent two different types.
   val state = RegInit(State.sNone)
 ```
 
-Thus, the designer has no knowledge of the actual numeric value of the state.
-Fig. 6 and 7 raises two issues in the waveform representation of a state register encoded with a `ChiselEnum`: 
-1. No information about the state name (i.e. `sNone`) is available. 
+Thus, Chisel hides the knowledge of the actual numeric value of the state.
+
+### 2.1. DetectTwoOnes in waveforms
+
+Fig. 8 and 9 raises two issues in the waveform representation of a state register encoded with a `ChiselEnum`: 
+1. No information about the state names (i.e. `sNone`) is available. 
   Designers must manually map the number dispayed to the actual state name by looking at the order of the states in the `ChiselEnum` declaration. 
   Although it does not seem a problem with few enum variants, this mapping may not be trivial for large enumerations.
 2. Besides that, traces from some backends (i.e. Treadle and Verilator) classify registers as `wire`s instead of `reg`, such as the state val in the example.
-  In fig. 6 the state val is describred as a wire, while in fig. 7 it is described as a register.
+  In fig. 8 the state val is describred as a wire, while in fig. 9 it is described as a register.
   This unexpected result raises additional discrepancy between the chisel code and its representation in waveforms.   
-3. Finally, fig. 7 introduces another difference related to the used backend. 
+3. Finally, fig. 9 introduces another difference related to the used backend. 
   A new wire, absent in the code, is instead displayed (`_GEN_2`).
   This is generated in the verilog file used by Verilator and Icarus to support the state assignment.
   Conversely, this information is not available to the user and it may mislead them.
  
 | ![FSM Waveforms](./images/fsm/fsm_waves.png)                                            |
 | --------------------------------------------------------------------------------------- |
-| Fig. 6 - *A `ChiselEnum` is represented by only its numbered value in waveform viewers* |
+| Fig. 8 - *A `ChiselEnum` is represented by only its numbered value in waveform viewers* |
 
 | ![FSM Waveforms with some autogenerated signals](./images/fsm/fsm_waves_icarus.png) |
 | ----------------------------------------------------------------------------------- |
-| Fig. 7 - *A non-declared signal appears when the Icarus Verilog is executed*        |
+| Fig. 9 - *A non-declared signal appears when the Icarus Verilog is executed*        |
+
+### 2.2. DetectTwoOnes in HGDB
+
+Fig. 10 shows a snapshot of the FSM internal signals from the HGDB debugger.
+- Yet, no information about the state names. Only raw values. Also it is not possible what are the possible values of the states.
+- No signal width information.
+- Also here not possible to distinguish if a signal is a register or a wire from the left panel. This is although possible from the code. Since the user has a view of both code and debugger, it is not a big issue as in the waveforms.
+- Here, I had a new problem while trying to simulate this example through HGDB. The FIRRTL representation, generated through `ChiselStage`[^6], contains some temp nodes (_T) that are propagated in the toml file used to generate the symbol table. This will raise errors like `Unable to validate breakpoint expression: !reset && !io_in && _T_5 && !_T_2`. To fix this I had to replace those strings with "1" in the toml file.
+
+| ![FSM from HGDB](./images/fsm/fsm_hgdb.png)                    |
+| -------------------------------------------------------------- |
+| Fig. 10 - *FSM in HGDB using the verilator backend simulation* |
 
 ## Parity: using `Enum` instead of `ChiselEnum`
 Similarly to the previous example, `Parity` uses an enumeration to encode its state through the `Enum` type instead of `ChiselEnum`.
 
 Analogously to `ChiselEnum`, `Enum` hides the actual numeric value of its variants.
 However, a look to its documentation[^3] reveals that `Enum` directly implements a ist of unique `UInt` constants.
-Consequently, the waveform viewers print out numeric values without any reference to the enumeration variant name.
+Consequently, the waveform viewers and hgdb print out numeric values without any reference to the enumeration variant name.
 
 ## Functionality: assign values to wires through different methods
 The `Functionality` example shows how different methods to assign values to wires affect the waveform representation.
@@ -263,7 +288,9 @@ In particular, the example includes the following types of assignment:
   io.z_class := clb_class(io.x, io.y, io.x, io.y)
   ```
 
-Fig. 8 illustrates the waveforms from a testbench of the Functionality module.
+### Functionality in waveforms
+
+Fig. 11 illustrates the waveforms from a testbench of the Functionality module.
 They shows that there is no difference between the 5 type assignments.
 This is expected since the actual ports are of a `UInt` type, that is the only information passed to the backend.
 Nonetheless, while dealing with chisel code, it would be useful to have a recall of what is the driving logic of a signal.
@@ -272,28 +299,45 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 
 | ![Functionality waveforms](./images/functionality/functionality_waves.png) |
 | -------------------------------------------------------------------------- |
-| Fig. 8 - *Waveforms of the `Functionality` module*                         |
+| Fig. 11 - *Waveforms of the `Functionality` module*                        |
+
+### Functionality in HGDB
+
+- Similar to the waveforms there is no differenc between the 5 type assignments.
+
+| ![Functionality in HGDB](./images/functionality/functionality_hgdb.png)  |
+| ------------------------------------------------------------------------ |
+| Fig. 12 - *Functionality in HGDB using the verilator backend simulation* |
 
 ## Memory: a simple memory module that wraps the `Mem` chisel module
 Chisel provides several constructs to represent memories[^5].
 The `Mem` module implements a random-access memory that with asynchronous read and synchronous write ports. 
 The `Memory` example serves to illustrate the `Mem` module representation in the testing tools.
 
-Fig. 9.1 and 9.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
+### Memory in waveforms
+Fig. 13.1 and 13.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
 It is immediate to see that the treadle backend does not dump the whole memory content in a VCD, but only the read and write ports (called here `pipeline_data_0`).
 Thus, it is not possible to inspect the memory content at any time step, but only when a read or write operation is performed and completed successfully.
 By contrast, verilator provides a better representation of the content of the same memory block, although, memory arrays are not grouped together by default as visible in fig. 9.2. 
 Thus, large memories may be difficult to inspect in waveforms due to representation which is not as concise as it could be.
 
-| ![Memory waveforms](./images/memory/memory_waves_treadle.png)           | ![Memory waveforms](./images/memory/memory_waves_verilator.png)           |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Fig. 9.1 - *Waveforms of the `Memory` module using the treadle backend* | Fig. 9.2 - *Waveforms of the `Memory` module using the verilator backend* |
+| ![Memory waveforms](./images/memory/memory_waves_treadle.png)            | ![Memory waveforms](./images/memory/memory_waves_verilator.png)            |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Fig. 13.1 - *Waveforms of the `Memory` module using the treadle backend* | Fig. 13.2 - *Waveforms of the `Memory` module using the verilator backend* |
 
 In order to understand why the two backends produce different results, I inspected the RTL codes used by each backend.
 Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
 The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
 
 > **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
+
+### Memory in HGDB
+
+- No information about the memory content
+- Similar to waveforms (fig. 13.1) only io ports are available
+| ![Memory in HGDB](./images/memory/memory_hgdb.png)                |
+| ----------------------------------------------------------------- |
+| Fig. 14 - *Memory in HGDB using the verilator backend simulation* |
 
 ## Router: using chisel "typed" abstraction to represent circtuit components and characteristics
 The `Router` is the most complex among the selected examples.
@@ -314,7 +358,9 @@ class RouterIO(val n: Int) extends Bundle {
 }
 ```
 
-Fig. 10 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
+### Router in waveforms
+
+Fig. 15 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
 First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it used to specify the router sizes.
 When the designer writes their blocks, they just use the actual values through the defined parameters (i.e. `val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))`)
 Furthermore, there is no information related to what signals are related to a Packet, WriteCmd or ReadCmd. Every type declared as a class is decomposed in its fields and represented as separate signals.
@@ -331,16 +377,26 @@ class WriteCmd extends ReadCmd {
 Those classes have a common field `address`: looking at the figure, understanding whether `io_trad_routing_table_response` is a `ReadCmd` or not is far from trivial if only the waveforms (no comments, no code) are taken into account.
 
 
-
 | ![Router waveforms from treadle](./images/router/router_treadle_waves.png) |
 | -------------------------------------------------------------------------- |
-| Fig. 10 - *Waveforms of the `Router` module using the treadle backend*     |
+| Fig. 15 - *Waveforms of the `Router` module using the treadle backend*     |
 
 
-Fig. 11 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+Fig. 16 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+
 | ![Router waveforms from treadle with grouped signals](./images/router/router_treadle_waves_grouped.png)                       |
 | ----------------------------------------------------------------------------------------------------------------------------- |
-| Fig. 11 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
+| Fig. 16 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
+
+### ROUTER in HGDB
+
+- Also here, no reference to the Router characteristics (i.e. `Router.addressWidth` and `Router.dataWidth`)
+- No information about `Packet`, `ReadCmd` and `WriteCmd` types. This can be only inspected by looking at the fields and at the code: for example `load_routing_table` appears as an obkect with fields `bits.addr`, `bits.data`, `ready` and `valid`.
+- Everything is `Object` if contains some nested fields, otherwise it is a numeric type (no information if `UInt`, `Bool`... or width)
+
+| ![Router in HGDB](./images/router/router_hgdb.png)                |
+| ----------------------------------------------------------------- |
+| Fig. 17 - *Router in HGDB using the verilator backend simulation* |
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)
@@ -352,3 +408,5 @@ Fig. 11 shows how a slightly better representation of the router can be obtained
 [^4]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
 
 [^5]: *Memories* | *Chisel*. en. [![memories-chisel](https://img.shields.io/badge/Web_Page-Memories_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/memories)
+
+[^6]: *circt.stage.ChiselStage* en. [![chiselstage](https://img.shields.io/badge/Web_Page-circt.stage.ChiselStage-blue)](https://javadoc.io/doc/edu.berkeley.cs/chisel3_2.13/latest/index.html)

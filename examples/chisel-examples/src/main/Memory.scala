@@ -36,14 +36,26 @@ class Memory(val n: Int, val width: Int) extends Module {
 
 
 object MemoryVerilog extends App {
-  private val outputDir = "output/memory/verilog"
-  val n = 16
-  private val width = 32
-  private val print = true
-
-  // emit Verilog
-  emitVerilog(
-    new Memory(n, width),
-    Array("--split-verilog", "--target-dir", outputDir)
-  )
+  Emit(
+    "output/memory",
+    () => new Memory(4, 32),
+    "Memory"
+  ).verilog()
 }
+
+object MemoryFirrtl extends App {
+  Emit(
+    "output/memory",
+    () => new Memory(4, 32),
+    "Memory"
+  ).firrtl()
+}
+
+object MemoryHGDB extends App {
+  Emit(
+    "output/memory",
+    () => new Memory(4, 32),
+    "Memory"
+  ).hgdbOutputs()
+}
+

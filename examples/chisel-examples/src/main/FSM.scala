@@ -26,6 +26,7 @@ class DetectTwoOnes extends Module {
   val io = IO(new Bundle {
     val in = Input(Bool())
     val out = Output(Bool())
+    val inDebug = Output(Bool())
   })
 
   object State extends ChiselEnum {
@@ -34,6 +35,7 @@ class DetectTwoOnes extends Module {
 
   val state = RegInit(State.sNone)
 
+  io.inDebug := io.in // This is needed to make hgdb able to stop at the breakpoint, breakpoints in the states won't work
   io.out := (state === State.sTwo1s)
 
   switch(state) {
@@ -77,30 +79,25 @@ class DetectTwoOnes extends Module {
 //}
 
 object DetectTwoOnesVerilog extends App {
-  private val outputDir = "output/fsm/verilog"
-
-  // emit Verilog
-  emitVerilog(
-    new DetectTwoOnes(),
-    Array("--target-dir", outputDir, "--split-verilog")
-  )
+  Emit(
+    "output/fsm",
+    () => new DetectTwoOnes(),
+    "DetectTwoOnes"
+  ).verilog()
 }
 
 object DetectTwoOnesFIRRTL extends App {
-  private val outputDir = "output/fsm/firrtl"
+  Emit(
+    "output/fsm",
+    () => new DetectTwoOnes(),
+    "DetectTwoOnes"
+  ).firrtl()
+}
 
-  val firrtl = ChiselStage.emitCHIRRTL(
-    new DetectTwoOnes())
-
-  // val thisDir = new java.io.File(".").getCanonicalPath
-  val dir = new java.io.File(outputDir)
-  if (!dir.exists()) {
-    dir.mkdir()
-  }
-
-  val pw =
-    new java.io.PrintWriter(new java.io.File(outputDir + "/DetectTwoOnes.fir"))
-  pw.write(firrtl)
-  pw.close()
-
+object DetectTwoOnesHGDB extends App {
+  Emit(
+    "output/fsm",
+    () => new DetectTwoOnes(),
+    "DetectTwoOnes"
+  ).hgdbOutputs()
 }
