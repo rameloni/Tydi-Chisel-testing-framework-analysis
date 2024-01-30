@@ -22,14 +22,14 @@ clean:
 # Compile tydi file to json, output build add the name of this directory
 json:
 > @mkdir -p $(THIS_DIR)$(BUILD_DIR)
-> @cd $(SRC) && $(CC) -c $(CONFIG_TOML) -o $(THIS_DIR)$(BUILD_DIR)/$(basename $(SRC))
+> @cd $(SRC) && $(CC) -c $(CONFIG_TOML) -o $(THIS_DIR)$(BUILD_DIR)/$(shell basename $(SRC))
 
 else
 
 all clean:
-	@for dir in $(shell ls); do \
+	@for dir in $(shell ls src); do \
 		if [ $$dir != "build" ] && [ $$dir != "Makefile" ]; then \
-			$(MAKE) SRC=$$dir $@; \
+			$(MAKE) SRC="src/$$dir" $@; \
 		fi \
 	done
 
