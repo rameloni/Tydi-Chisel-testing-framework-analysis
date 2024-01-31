@@ -20,7 +20,7 @@ class HelloWorldTestWrapper(module: => Helloworld_rgb,
     val inputStream = Flipped(mod.inputStream.cloneType)
     val outputStream = mod.outputStream.cloneType
 
-    val input2Stream = Flipped(mod.outputStream.cloneType)
+    val input2Stream = Flipped(mod.input2Stream.cloneType)
     val output2Stream = mod.output2Stream.cloneType
   })
 

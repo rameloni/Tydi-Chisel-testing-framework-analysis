@@ -56,7 +56,7 @@ class Rgb_bypass extends TydiModule {
   /** Stream of [[io.output2]] with output direction. */
   val output2Stream = Generated_0_101_bHWhCFjR_22()
 
-  // Group
+  // Group of Physical IOs
   val io = new Bundle {
     /** IO of [[inputStream]] with input direction. */
     val input = inputStream.toPhysical
@@ -69,16 +69,6 @@ class Rgb_bypass extends TydiModule {
     val output2 = output2Stream.toPhysical
   }
 
-  // IO connections
-  // Stream 1.
-  inputStream := io.input
-  outputStream := inputStream
-  io.output := outputStream
-
-  // Stream 2.
-  input2Stream := io.input2
-  output2Stream := input2Stream
-  io.output2 := output2Stream
 }
 
 /**
@@ -87,7 +77,10 @@ class Rgb_bypass extends TydiModule {
  */
 class Helloworld_rgb extends Rgb_bypass {
   // Connections
-  inputStream.ready := true.B
+  outputStream := inputStream
+  output2Stream := input2Stream
+
+  inputStream.ready := true.B // This will overload the previous connection
 
   val accumulate = Counter(Int.MaxValue)
 
