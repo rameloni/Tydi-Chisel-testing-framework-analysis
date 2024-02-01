@@ -81,9 +81,17 @@ class Pixel_converterTester(dut: Pixel_converterTestWrapper, stepsFor: Int = 1, 
 
           // Create a pixel
           val pixel = createPixel(tag, Rgb(r, g, b), (r + g + b) / 3, r / 3.0f, g / 3.0f)
+
           // Enqueue the input stream
-          dut.io.inputStream.enqueue(pixel)
-          
+          tag = (tag + 1) % 2
+          parallel(
+            dut.io.inputStream.enqueue(pixel),
+            fork
+              .withRegion(Monitor) {
+                dut.io.outputStream.el.color.tag.expect(tag.U)
+              }
+              .joinAndStep(dut.clock)
+          )
         }
 
     println(pixel_t.color.createEnum)
