@@ -64,6 +64,16 @@ All the examples are related each other and they have an increasing complexity.
 > **Note:** The examples are used to perform the analysis of the testing frameworks. Results are reported in the 
 > [results](/results) directory.
 
+
+Each example aims to test the representation of a particular Tydi feature, how it is represented in the testing frameworks by using the Tydi-Chisel backend.
+
+| Example                 | Target                                                                      |
+| :---------------------- | :-------------------------------------------------------------------------- |
+| `HelloWorldRgb`         | Explore the representation of `Groups` and `Streams` in testing frameworks. |
+| `PixelConverter`        | Understand how `Unions` are depicted in testing frameworks.                 |
+| `PipelineSimple`        | See how multiple tydi modules are represented in testing frameworks.        |
+| `PipelineNestedGroup`   | Analyze the impact of nested tydi groups on testing frameworks.             |
+| `PipelineNestedStreams` | Examine the impact of nested streams on testing frameworks.                 |
 # References
 
 [^1]: Yongding Tian et al. **“Tydi-lang: A Language for Typed Streaming Hardware”**. In: *Proceedings of the SC ’23 Workshops of The International Conference on High Performance Computing, Network, Storage, and Analysis*. Denver CO USA: ACM, Nov. 12, 2023, pp. 521–529. ISBN: 9798400707858. [![10.1145/3624062.3624539](https://zenodo.org/badge/DOI/10.1145/3624062.3624539.svg)](https://doi.org/10.1145/3624062.3624539)
