@@ -83,7 +83,7 @@ class PipelineNestedStreamTester(dut: PipelineNestedStreamTestWrapper) {
         days = Seq(1, 1, 2, 3, 4, 5, 6, 3),
         months = Seq(1, 1, 2, 3, 4, 5, 6, 2),
         years = Seq(2013, 2014, 2022, 2024, 2027, 5, 6, 1),
-        utc = Seq(-1, -1, -2, 0, 1, 1, -1, 1))
+        utc = Seq(-1, -1, -2, 0, 1, 1, -1, 10))
     )
     var tot = 0
     var avg, max, min, sum = 0
@@ -100,11 +100,12 @@ class PipelineNestedStreamTester(dut: PipelineNestedStreamTestWrapper) {
         avg = sum / tot
       }
       val expected = stats_t.Lit(_.average -> avg.U, _.max -> max.U, _.min -> min.U, _.sum -> sum.U)
-      println(s"tot: $tot, avg: $avg, max: $max, min: $min, sum: $sum")
+      //      println(s"tot: $tot, avg: $avg, max: $max, min: $min, sum: $sum")
 
       // Perform the test
       parallel(
-        dut.io.inStream.enqueueElNow(el),
+
+        dut.io.inStream.enqueue(el),
         {
           dut.clock.step() // Elements are available one clock cycle after the enqueue, because they are internally implemented as REGs
           //          dut.io.outStream.expectDequeueNow(expected)
@@ -114,21 +115,25 @@ class PipelineNestedStreamTester(dut: PipelineNestedStreamTestWrapper) {
   }
 
   private def createStreamLit[Tel <: TydiEl, Tus <: Data, StreamEl <: PhysicalStreamDetailed[Tel, Tus]]
-  (stream_t: StreamEl, elements: Seq[Tel], user: Tus, last: Boolean = false): StreamEl = {
+  (stream_t: StreamEl, elements: Seq[Tel], user: Tus, lasts: Seq[Boolean]): StreamEl = {
     assert(elements.nonEmpty, "The elements list must not be empty")
     assert(elements.length == stream_t.data.length, "The elements list must have the same length as the stream data field: " +
       s"Input length: ${elements.length} != Stream length: ${stream_t.data.length}")
 
-    val lasts = Vec(1, UInt(1.W)).Lit(Seq((0, last.asBool.asUInt)): _*)
     stream_t.Lit(
       _.data -> {
         val x = elements.zipWithIndex.map(v => (v._2, v._1))
         Vec(elements.length, elements.head.cloneType).Lit(x: _*)
       },
-      _.last -> lasts,
+      _.last -> {
+        val x = lasts.zipWithIndex.map(v => (v._2, v._1.asBool))
+        Vec(lasts.length, UInt(1.W)).Lit(x: _*)
+      },
       _.ready -> false.B,
       _.valid -> true.B,
       _.strb -> 1.U,
+      _.endi -> 1.U,
+      _.stai -> 0.U,
       //      _.user ->
     )
   }
@@ -144,26 +149,29 @@ class PipelineNestedStreamTester(dut: PipelineNestedStreamTestWrapper) {
       )
       // Check if numberGroupWithString_t.my_custom_string is a bundle
 
-
-      val nestedString = numberGroupWithString_t.my_custom_string.cloneType
-
-      val chars = char_t.Lit(_.value -> 'f'.U)
-
-      val last = Vec(1, UInt(1.W)).Lit(Seq((0, true.B)): _*)
-      //      println(s"Null.isInstanceOf[chisel3.Data]: ${Null().isInstanceOf[chisel3.Data]}")
-      //      println(s"chars.isInstanceOf[nl.tudelft.tydi_chisel.TydiEl]: ${chars.isInstanceOf[nl.tudelft.tydi_chisel.TydiEl]}")
-      //      println(s"nestedString.isInstanceOf[nl.tudelft.tydi_chisel.PhysicalStreamDetailed]: " +
-      //        s"${nestedString.isInstanceOf[nl.tudelft.tydi_chisel.PhysicalStreamDetailed[TydiEl, Data]]}")
-      val x = numberGroupWithString_t.Lit(
-        _.date -> dates(i),
-        _.numberNested -> numberGroup,
-
-        //                _.my_custom_string -> nestedString.Lit(_.el -> chars, _.last -> last, _.strb -> 1.U, _.ready -> false.B, _.valid -> true.B),
-        _.my_custom_string -> createStreamLit(new Char_stream(), Seq(chars), last = true, user = Null()),
-
-      )
-      //      x <> nestedString
-      result = result :+ x
+      val msg = s"This is a nested message ${dates(i).utc.litValue.toInt} at time ${times(i)} with value ${values(i)}"
+      val chars = msg.map(c => char_t.Lit(_.value -> c.U))
+      var lasts = chars.map(_ => false)
+      lasts = lasts.updated(lasts.length - 1, true)
+      for (j <- chars.indices by new Char_stream().n) {
+        // Get the next n characters
+        var charBus = Seq(chars.slice(j, j + new Char_stream().n): _*)
+        // Fill the charBus of Null if there are not enough characters
+        if (charBus.length < new Char_stream().n) {
+          charBus = charBus ++ Seq.fill(new Char_stream().n - charBus.length)(char_t.Lit(_.value -> 0.U))
+        }
+        var lastBus = Seq(lasts.slice(j, j + new Char_stream().n): _*)
+        // Fill the lastBus of Null if there are not enough lasts
+        if (lastBus.length < new Char_stream().n) {
+          lastBus = lastBus ++ Seq.fill(new Char_stream().n - lastBus.length)(false)
+        }
+        val x = numberGroupWithString_t.Lit(
+          _.date -> dates(i),
+          _.numberNested -> numberGroup,
+          _.my_custom_string -> createStreamLit(new Char_stream(), charBus, lasts = lastBus, user = Null()),
+        )
+        result = result :+ x
+      }
     }
     result
   }

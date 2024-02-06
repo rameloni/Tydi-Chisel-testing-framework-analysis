@@ -2,7 +2,7 @@ package tydiexamples.pipelinenestedstream
 
 import nl.tudelft.tydi_chisel._
 import chisel3._
-import chisel3.util.Counter
+import chisel3.util.{Counter, is, switch}
 import emit.Emit
 
 object MyTypes {
@@ -66,12 +66,9 @@ class Generated_0_7_8dFmtPGe_37 extends BitsEl(12.W)
 
 /** Group element, defined in pipelineNestedStream_types.
  * The Number Group from PipelineNestedGroup extended with a nested stream. */
-class NumberGroupWithString(flipped: Boolean = false) extends Group {
+class NumberGroupWithString extends Group {
   val date = new DateTimeGroup
-  val my_custom_string = if (flipped) {
-    println("Flipped")
-    Flipped(new Char_stream)
-  } else new Char_stream
+  val my_custom_string = new Char_stream
   val numberNested = new NumberGroup
 }
 
@@ -83,7 +80,7 @@ class StatsWithString extends Group {
 }
 
 /** Stream, defined in pipelineNestedStream_types. */
-class Char_stream extends PhysicalStreamDetailed(e = new Char_t, n = 1, d = 1, c = 1, r = false, u = Null())
+class Char_stream extends PhysicalStreamDetailed(e = new Char_t, n = 3, d = 1, c = 1, r = false, u = Null())
 
 object Char_stream {
   def apply(): Char_stream = Wire(new Char_stream())
@@ -97,12 +94,10 @@ object Stats_stream {
 }
 
 /** Stream, defined in pipelineNestedStream_types. */
-class NumberGroup_stream(flipped: Boolean = false) extends PhysicalStreamDetailed(e = new NumberGroupWithString(flipped), n = 1, d = 1, c = 1, r = false, u = Null())
+class NumberGroup_stream extends PhysicalStreamDetailed(e = new NumberGroupWithString, n = 1, d = 1, c = 1, r = false, u = Null())
 
 object NumberGroup_stream {
   def apply(): NumberGroup_stream = Wire(new NumberGroup_stream())
-
-  def flipped(): NumberGroup_stream = Flipped(new NumberGroup_stream(flipped = true))
 }
 
 /** Bit(8), defined in pipelineNestedStream_types. */
@@ -192,25 +187,54 @@ class Reducer_interface extends TydiModule {
  * This is a comment.
  */
 class NonNegativeFilter extends NonNegativeFilter_interface {
+
+  object StringReceiverState extends ChiselEnum {
+    val IDLE, RECEIVING = Value
+  }
+
+  private val state = RegInit(StringReceiverState.IDLE)
+  dontTouch(state)
+
+
   // Filtered only if the value is non-negative
   // inStream.valid tells us if the input is valid
-  private val canPass: Bool = inStream.el.numberNested.value >= 0.S && inStream.el.date.utc >= 1.S && inStream.valid
+  private val canPass: Bool = inStream.el.numberNested.value >= 0.S && inStream.el.date.utc >= 1.S &&
+    inStream.valid && state === StringReceiverState.IDLE
+
+  switch(state) {
+    is(StringReceiverState.IDLE) {
+      when(canPass && inStream.el.my_custom_string.valid
+        //        && inStream.el.my_custom_string.last.last === 0.U(1.W)) {
+        && inStream.el.my_custom_string.last.exists(x => x === 0.U)) {
+        state := StringReceiverState.RECEIVING
+      }
+    }
+    is(StringReceiverState.RECEIVING) {
+      when(inStream.el.my_custom_string.valid
+        //        && inStream.el.my_custom_string.last.last === 1.U(1.W)) {
+        && inStream.el.my_custom_string.last.exists(x => x === 1.U)) {
+        state := StringReceiverState.IDLE
+      }
+    }
+  }
+
 
   // Connect inStream to outStream
   // This is equivalent of connecting al the fields of the two streams
   // Every future assignment will overwrite the previous one
   outStream := inStream
 
-  // Always ready to accept input
-  inStream.ready := true.B
-  inStream.el.my_custom_string.ready := inStream.ready
+  // Accept new inputs when the a string is fully finished
+  inStream.ready := inStream.el.my_custom_string.ready
+  // Always ready to accept an input string
+  inStream.el.my_custom_string.ready := true.B
   //  inStream.el.my_custom_string.ready := inStream.ready
 
   // if (canPass) then { it can go out } else { it is not forwarded }
   outStream.valid := canPass && outStream.ready
   outStream.strb := inStream.strb(0) && canPass
 
-  outStream.el.my_custom_string.valid := inStream.el.my_custom_string.valid && outStream.valid
+  outStream.el.my_custom_string.valid := inStream.el.my_custom_string.valid && (outStream.valid || state === StringReceiverState.RECEIVING)
 
 }
 
@@ -293,12 +317,18 @@ class Reducer extends Reducer_interface {
   outStream.strb := 1.U
   outStream.stai := 0.U
   outStream.endi := 1.U
-  outStream.last(0) := inStream.last(0)
+  outStream.last := inStream.last
 
   // Nested stream
   outStream.el.my_custom_string := inStream.el.my_custom_string
+  when(inStream.el.my_custom_string.valid) {
+    inStream.el.my_custom_string.data.foreach(x => printf(cf"${x.value}%c"))
+    //    when(inStream.el.my_custom_string.last.last === 1.U) {
+    when(inStream.el.my_custom_string.last.exists(x => x === 1.U)) {
+      printf("\n")
 
-
+    }
+  }
 }
 
 
