@@ -10,8 +10,9 @@ import nl.tudelft.tydi_chisel.Conversions._
 
 
 class PipelineSimpleTestWrapper(module: => PipelineSimple,
-                                val eIn: NumberGroup,
-                                val eOut: Stats) extends TydiModule {
+                                // val eIn: NumberGroup,
+                                // val eOut: Stats
+                               ) extends TydiModule {
   private val mod: PipelineSimple = Module(module)
 
   val io = IO(new Bundle {
@@ -86,42 +87,42 @@ class PipelineSimpleWaveformTest extends AnyFlatSpec with ChiselScalatestTester 
   val stepsFor = 98
 
   it should "dump Treadle VCD" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(WriteVcdAnnotation, TreadleBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }
   }
 
   it should "dump Verilator VCD" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(WriteVcdAnnotation, VerilatorBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }
   }
 
   it should "dump Icarus VCD" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(WriteVcdAnnotation, IcarusBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }
   }
 
   it should "dump Verilator FST" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(WriteFstAnnotation, VerilatorBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }
   }
 
   it should "dump Icarus FST" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(WriteFstAnnotation, IcarusBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }
   }
 
   it should "dump Icarus LXT" in {
-    test(new PipelineSimpleTestWrapper(new PipelineSimple, new NumberGroup, new Stats))
+    test(new PipelineSimpleTestWrapper(new PipelineSimple /*,  new NumberGroup, new Stats */))
       .withAnnotations(Seq(new WriteLxtAnnotation, IcarusBackendAnnotation)) {
         PipelineSimpleTester(_, stepsFor = stepsFor)
       }

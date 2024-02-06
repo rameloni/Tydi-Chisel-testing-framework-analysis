@@ -22,7 +22,6 @@ All the examples are related each other and they have an increasing complexity.
   // Input stream: {timestamp, value}
   // Output stream: {min_value, max_value, sum_value, avg_value}
   df.filter(col("value") >= 0)
-      .groupBy("timestamp")
       .agg( 
           min("value").as("min_value"), 
           max("value").as("max_value"), 
@@ -37,7 +36,6 @@ All the examples are related each other and they have an increasing complexity.
   // Input stream: {timestamp, value, date}
   // Output stream: {min_value, max_value, sum_value, avg_value}
   df.filter(col("value") >= 0 && col("date").utc() >= +1)
-      .groupBy("timestamp")
       .agg( 
           min("value").as("min_value"), 
           max("value").as("max_value"), 
@@ -51,7 +49,6 @@ All the examples are related each other and they have an increasing complexity.
   // Input stream: {timestamp, value, date, string}
   // Output stream: {min_value, max_value, sum_value, avg_value, string}
   df.filter(col("value") >= 0 && col("date").utc() >= +1)
-      .groupBy("timestamp")
       .agg( 
           min("value").as("min_value"), 
           max("value").as("max_value"), 
