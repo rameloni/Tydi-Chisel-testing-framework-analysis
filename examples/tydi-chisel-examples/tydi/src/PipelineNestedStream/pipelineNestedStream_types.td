@@ -13,7 +13,7 @@ Group NumberGroupWithString {
 
 // Define a char stream
 Char_t = Bit(8); // UInt<8>
-Char_stream = Stream(Char_t, t=1.0, d=1, c=1);
+Char_stream = Stream(Char_t, t=3.0, d=1, c=1);
 
 #The Stats from PipelineSimple extended with a nested stream#
 Group StatsWithString {

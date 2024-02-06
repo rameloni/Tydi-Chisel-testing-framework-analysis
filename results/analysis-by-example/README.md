@@ -13,16 +13,19 @@ This section aims to identify the weaknesses in the current representations with
   - [2. DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states](#2-detecttwoones-a-simple-finite-state-machine-that-uses-chiselenum-to-represent-the-states)
     - [2.1. DetectTwoOnes in waveforms](#21-detecttwoones-in-waveforms)
     - [2.2. DetectTwoOnes in HGDB](#22-detecttwoones-in-hgdb)
-  - [Parity: using `Enum` instead of `ChiselEnum`](#parity-using-enum-instead-of-chiselenum)
-  - [Functionality: assign values to wires through different methods](#functionality-assign-values-to-wires-through-different-methods)
-    - [Functionality in waveforms](#functionality-in-waveforms)
-    - [Functionality in HGDB](#functionality-in-hgdb)
-  - [Memory: a simple memory module that wraps the `Mem` chisel module](#memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
-    - [Memory in waveforms](#memory-in-waveforms)
-    - [Memory in HGDB](#memory-in-hgdb)
-  - [Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
-    - [Router in waveforms](#router-in-waveforms)
-    - [ROUTER in HGDB](#router-in-hgdb)
+  - [3. Parity: using `Enum` instead of `ChiselEnum`](#3-parity-using-enum-instead-of-chiselenum)
+  - [4. Functionality: assign values to wires through different methods](#4-functionality-assign-values-to-wires-through-different-methods)
+    - [4.1. Functionality in waveforms](#41-functionality-in-waveforms)
+    - [4.2. Functionality in HGDB](#42-functionality-in-hgdb)
+  - [5. Memory: a simple memory module that wraps the `Mem` chisel module](#5-memory-a-simple-memory-module-that-wraps-the-mem-chisel-module)
+    - [5.1. Memory in waveforms](#51-memory-in-waveforms)
+    - [5.2. Memory in HGDB](#52-memory-in-hgdb)
+  - [6. Router: using chisel "typed" abstraction to represent circtuit components and characteristics](#6-router-using-chisel-typed-abstraction-to-represent-circtuit-components-and-characteristics)
+    - [6.1. Router in waveforms](#61-router-in-waveforms)
+    - [6.2. Router in HGDB](#62-router-in-hgdb)
+  - [7. Tydi HelloWorldRgb: the simplest Tydi example](#7-tydi-helloworldrgb-the-simplest-tydi-example)
+    - [7.1. Tydi HelloWorldRgb in waveforms](#71-tydi-helloworldrgb-in-waveforms)
+    - [7.2. Tydi HelloWorldRgb in HGDB](#72-tydi-helloworldrgb-in-hgdb)
 - [References](#references)
 
 
@@ -246,14 +249,14 @@ Fig. 10 shows a snapshot of the FSM internal signals from the HGDB debugger.
 | -------------------------------------------------------------- |
 | Fig. 10 - *FSM in HGDB using the verilator backend simulation* |
 
-## Parity: using `Enum` instead of `ChiselEnum`
+## 3. Parity: using `Enum` instead of `ChiselEnum`
 Similarly to the previous example, `Parity` uses an enumeration to encode its state through the `Enum` type instead of `ChiselEnum`.
 
 Analogously to `ChiselEnum`, `Enum` hides the actual numeric value of its variants.
 However, a look to its documentation[^3] reveals that `Enum` directly implements a ist of unique `UInt` constants.
 Consequently, the waveform viewers and hgdb print out numeric values without any reference to the enumeration variant name.
 
-## Functionality: assign values to wires through different methods
+## 4. Functionality: assign values to wires through different methods
 The `Functionality` example shows how different methods to assign values to wires affect the waveform representation.
 
 In particular, the example includes the following types of assignment:
@@ -288,7 +291,7 @@ In particular, the example includes the following types of assignment:
   io.z_class := clb_class(io.x, io.y, io.x, io.y)
   ```
 
-### Functionality in waveforms
+### 4.1. Functionality in waveforms
 
 Fig. 11 illustrates the waveforms from a testbench of the Functionality module.
 They shows that there is no difference between the 5 type assignments.
@@ -301,7 +304,7 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 | -------------------------------------------------------------------------- |
 | Fig. 11 - *Waveforms of the `Functionality` module*                        |
 
-### Functionality in HGDB
+### 4.2. Functionality in HGDB
 
 - Similar to the waveforms there is no differenc between the 5 type assignments.
 
@@ -309,12 +312,12 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 | ------------------------------------------------------------------------ |
 | Fig. 12 - *Functionality in HGDB using the verilator backend simulation* |
 
-## Memory: a simple memory module that wraps the `Mem` chisel module
+## 5. Memory: a simple memory module that wraps the `Mem` chisel module
 Chisel provides several constructs to represent memories[^5].
 The `Mem` module implements a random-access memory that with asynchronous read and synchronous write ports. 
 The `Memory` example serves to illustrate the `Mem` module representation in the testing tools.
 
-### Memory in waveforms
+### 5.1. Memory in waveforms
 Fig. 13.1 and 13.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
 It is immediate to see that the treadle backend does not dump the whole memory content in a VCD, but only the read and write ports (called here `pipeline_data_0`).
 Thus, it is not possible to inspect the memory content at any time step, but only when a read or write operation is performed and completed successfully.
@@ -331,7 +334,7 @@ The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`),
 
 > **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
 
-### Memory in HGDB
+### 5.2. Memory in HGDB
 
 - No information about the memory content
 - Similar to waveforms (fig. 13.1) only io ports are available
@@ -339,7 +342,7 @@ The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`),
 | ----------------------------------------------------------------- |
 | Fig. 14 - *Memory in HGDB using the verilator backend simulation* |
 
-## Router: using chisel "typed" abstraction to represent circtuit components and characteristics
+## 6. Router: using chisel "typed" abstraction to represent circtuit components and characteristics
 The `Router` is the most complex among the selected examples.
 It uses classes and objects to represent and implement its components and characteristics.
 For example, an `object` at the top of the file is used to group the main characteristics of the router, providing a parametrized implementation. This can be viewed similar to parameters in Verilog modules.
@@ -358,7 +361,7 @@ class RouterIO(val n: Int) extends Bundle {
 }
 ```
 
-### Router in waveforms
+### 6.1. Router in waveforms
 
 Fig. 15 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
 First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it used to specify the router sizes.
@@ -388,7 +391,7 @@ Fig. 16 shows how a slightly better representation of the router can be obtained
 | ----------------------------------------------------------------------------------------------------------------------------- |
 | Fig. 16 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
 
-### ROUTER in HGDB
+### 6.2. Router in HGDB
 
 - Also here, no reference to the Router characteristics (i.e. `Router.addressWidth` and `Router.dataWidth`)
 - No information about `Packet`, `ReadCmd` and `WriteCmd` types. This can be only inspected by looking at the fields and at the code: for example `load_routing_table` appears as an obkect with fields `bits.addr`, `bits.data`, `ready` and `valid`.
@@ -397,6 +400,74 @@ Fig. 16 shows how a slightly better representation of the router can be obtained
 | ![Router in HGDB](./images/router/router_hgdb.png)                |
 | ----------------------------------------------------------------- |
 | Fig. 17 - *Router in HGDB using the verilator backend simulation* |
+
+## 7. Tydi HelloWorldRgb: the simplest Tydi example
+
+The `HelloWorldRgb` is the simplest Tydi example. 
+It simply instantiates two streams of group `Rgb`, and connects its input streams directly to the output streams.
+
+An `Rgb` group is defined as a collection of three `color_channel_type` signals, each of which is a `Bit` of `color_depth` bits.
+As it can be seen from the following code snippet, tydi-lang allows to define Streams and connect them together in a single line of code, while hiding the complexity of the underlying chisel code.
+Once compiled to boilerplate code, the `Tydi-Chisel` library hides the complexity of the actual internal implementation providing logical wrappers `PhysicalStreamDetailed` that raises the level of abstraction.
+> **TODO:** check Tydi-Chisel paper for this part.
+
+```cpp
+// Define an rgb
+color_depth = 8;
+color_channel_type = Bit(color_depth);
+Group Rgb {
+  r: color_channel_type;
+  g: color_channel_type;
+  b: color_channel_type;
+}
+// ...
+stream_type = Stream(Rgb, u=Rgb, c=complexity_level, t=throughput, r=direction, x=keep, d=dimension);
+stream2_type = Stream(Rgb, user_type=Null, complexity=1, throughput=2., direction="Reverse", keep=true, dimension=1);
+
+#RGB bypass streamlet documentation#
+streamlet rgb_bypass {
+  input: stream_type in / clockdomain_value;
+  output: stream_type out /"100MHz";
+  input2: stream2_type in;
+  output2: stream2_type out;
+}
+
+#RGB bypass implement documentation#
+impl helloworld_rgb of rgb_bypass {
+  #Stream 1#
+  self.input => self.output;
+  #Stream 2#
+  self.input2 => self.output2;
+}
+```
+
+Summarizing, the `HelloWorldRgb` example shows how Tydi-Chisel allows to raise the abstraction level of the chisel code, while hiding the complexity of the underlying chisel code. 
+From the logical point of view the user is sending `Rgb` groups through two tydi streams.
+Next sections show how these streams and data groups are represented in the waveforms and in the HGDB debugger.
+
+### 7.1. Tydi HelloWorldRgb in waveforms
+
+Fig. 18 shows the waveform representation of the `HelloWorldRgb` example.
+- Logical stream signals are not grouped together
+- Detailed representation is provided
+- There is no concept of the `Rgb` group type, but only of its fields are reported: r, g and b.
+- Moreover, the `stream2_type` as a throuput of 2, this means that 2 groups of `Rgb` can be sent every clock cycle so the data bus is duplicated. This is translated internally as 2 bits of strobe and 6 parallel data buses without any grouped representation.
+ 
+| ![Tydi HelloWorldRgb in waveforms](./images/tydi_hello_world/hello_world_waves.png)                             |
+| --------------------------------------------------------------------------------------------------------------- |
+| Fig. 18 - *Tydi HelloWorldRgb module in waveforms. Left: logical streams. Right: physical IO ports for streams* |
+
+### 7.2. Tydi HelloWorldRgb in HGDB
+
+- Same issues of chisel examples with hgdb: ERROR value displayed, only Object name, no information about the type of the signals (i.e. UInt, Vec, Bundle, etc...) and so on...
+- But also the good things: structure preserved. For example, the `Rgb` group
+- No direction information
+- No information about stream characteristics (i.e. throughput, complexity, etc...)
+
+| ![Tydi HelloWorldRgb in HGDB](./images/tydi_hello_world/hello_world_hgdb.png) |
+| ----------------------------------------------------------------------------- |
+| Fig. 19 - *Tydi HelloWorldRgb module in HGDB*                                 |
+
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)

@@ -1,0 +1,16 @@
+tydi-transpiler/
+target/
+
+tmp/
+
+target/
+output/
+
+# Chiseltest generated files
+test_run_dir/
+test_run_hgdb/
+
+**/verilatorTb/**/*.sv
+
+obj_dir/
+libhgdb.so
