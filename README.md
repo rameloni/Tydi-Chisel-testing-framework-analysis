@@ -25,7 +25,7 @@ All these aspects are explored and discussed in the [results](results) section.
   - [An analysis of the features of chiseltest: a testing framework for Chisel and Chisel-related projects](results/chiseltest)
   - [hgdb](results/hgdb): analysis of hgdb debugger
   - [An analysis of the waveforms produced by Chisel testbenches](results/waveforms)
-  - [A detailed analysis of Tydi-Chisel representations in testing frameworks](results/analysis-by-example)ù
+  - [A detailed analysis of Tydi-Chisel representations in testing frameworks](results/analysis-by-example)
 
 # References
 [^1]: Chisel, an open-source hardware description language (Constructing Hardware in a Scala Embedded Language). [![chisel](https://img.shields.io/badge/Github_Page-chisel-green)](https://github.com/chipsalliance/chisel)

@@ -26,6 +26,16 @@ This section aims to identify the weaknesses in the current representations with
   - [7. Tydi HelloWorldRgb: the simplest Tydi example](#7-tydi-helloworldrgb-the-simplest-tydi-example)
     - [7.1. Tydi HelloWorldRgb in waveforms](#71-tydi-helloworldrgb-in-waveforms)
     - [7.2. Tydi HelloWorldRgb in HGDB](#72-tydi-helloworldrgb-in-hgdb)
+  - [8. Tydi PixelConverter: extending the HelloWorldRgb example](#8-tydi-pixelconverter-extending-the-helloworldrgb-example)
+    - [8.1. Tydi PixelConverter in waveforms](#81-tydi-pixelconverter-in-waveforms)
+    - [8.2. Tydi PixelConverter in HGDB](#82-tydi-pixelconverter-in-hgdb)
+  - [9. Tydi PipelineSimple: filter and aggregate some values](#9-tydi-pipelinesimple-filter-and-aggregate-some-values)
+    - [9.1. Tydi PipelineSimple in waveforms](#91-tydi-pipelinesimple-in-waveforms)
+    - [9.2. Tydi PipelineSimple in HGDB](#92-tydi-pipelinesimple-in-hgdb)
+  - [10. Tydi PipelineNestedGroup](#10-tydi-pipelinenestedgroup)
+  - [11. Tydi PipelineNestedStream](#11-tydi-pipelinenestedstream)
+    - [11.1. Tydi PipelineNestedStream in waveforms](#111-tydi-pipelinenestedstream-in-waveforms)
+    - [11.2. Tydi PipelineNestedStream in HGDB](#112-tydi-pipelinenestedstream-in-hgdb)
 - [References](#references)
 
 
@@ -404,12 +414,11 @@ Fig. 16 shows how a slightly better representation of the router can be obtained
 ## 7. Tydi HelloWorldRgb: the simplest Tydi example
 
 The `HelloWorldRgb` is the simplest Tydi example. 
-It simply instantiates two streams of group `Rgb`, and connects its input streams directly to the output streams.
+It simply instantiates two streams of a group called `Rgb` and redirects its inputs to the output streams.
 
-An `Rgb` group is defined as a collection of three `color_channel_type` signals, each of which is a `Bit` of `color_depth` bits.
-As it can be seen from the following code snippet, tydi-lang allows to define Streams and connect them together in a single line of code, while hiding the complexity of the underlying chisel code.
-Once compiled to boilerplate code, the `Tydi-Chisel` library hides the complexity of the actual internal implementation providing logical wrappers `PhysicalStreamDetailed` that raises the level of abstraction.
-> **TODO:** check Tydi-Chisel paper for this part.
+An `Rgb` group is defined, in tydi-lang[^7], as a collection of 3 `color_channel_type` signals, each of them is a `Bit` of `color_depth` bits.
+As it can be seen from the following code snippet, tydi-lang allows to define Streams and connect them together in a single line of code, while hiding the complexity of the underlying chisel (backend) code.
+Once compiled to boilerplate code, the `Tydi-Chisel`[^8] [^9] library hides the complexity of the actual internal implementation providing logical wrappers `PhysicalStreamDetailed` that raises the level of abstraction.
 
 ```cpp
 // Define an rgb
@@ -424,50 +433,253 @@ Group Rgb {
 stream_type = Stream(Rgb, u=Rgb, c=complexity_level, t=throughput, r=direction, x=keep, d=dimension);
 stream2_type = Stream(Rgb, user_type=Null, complexity=1, throughput=2., direction="Reverse", keep=true, dimension=1);
 
-#RGB bypass streamlet documentation#
+// #RGB bypass streamlet documentation#
 streamlet rgb_bypass {
-  input: stream_type in / clockdomain_value;
-  output: stream_type out /"100MHz";
+  input: stream_type in;
+  output: stream_type out;
   input2: stream2_type in;
   output2: stream2_type out;
 }
 
-#RGB bypass implement documentation#
+// #RGB bypass implement documentation#
 impl helloworld_rgb of rgb_bypass {
-  #Stream 1#
+  // #Stream 1#
   self.input => self.output;
-  #Stream 2#
+  // #Stream 2#
   self.input2 => self.output2;
 }
 ```
 
-Summarizing, the `HelloWorldRgb` example shows how Tydi-Chisel allows to raise the abstraction level of the chisel code, while hiding the complexity of the underlying chisel code. 
-From the logical point of view the user is sending `Rgb` groups through two tydi streams.
-Next sections show how these streams and data groups are represented in the waveforms and in the HGDB debugger.
+Summarizing, the `HelloWorldRgb` example shows how tydi-lang can be used to declare composite data types and connection between streams, abstracting the actual implementation and behaviour of the circuit.
+From the tydi perspective the user is sending `Rgb` groups through two tydi streams.
+The tydi-lang-2-transpiler[^10] generates chisel boilerplate code in which the user can specify the actual behaviour of core modules that are connected through tydi streams.
+The actual implementation of tydi streams is hidden by the Tydi-Chisel library which implements the tydi specification and integrates utilities to use streams in chisel.
+Next sections show how these streams and data groups are represented in waveform viewers and in the HGDB debugger.
 
 ### 7.1. Tydi HelloWorldRgb in waveforms
 
 Fig. 18 shows the waveform representation of the `HelloWorldRgb` example.
-- Logical stream signals are not grouped together
-- Detailed representation is provided
-- There is no concept of the `Rgb` group type, but only of its fields are reported: r, g and b.
-- Moreover, the `stream2_type` as a throuput of 2, this means that 2 groups of `Rgb` can be sent every clock cycle so the data bus is duplicated. This is translated internally as 2 bits of strobe and 6 parallel data buses without any grouped representation.
- 
-| ![Tydi HelloWorldRgb in waveforms](./images/tydi_hello_world/hello_world_waves.png)                             |
-| --------------------------------------------------------------------------------------------------------------- |
-| Fig. 18 - *Tydi HelloWorldRgb module in waveforms. Left: logical streams. Right: physical IO ports for streams* |
+The trace files have been generated using chiseltest, similarly to the previous examples.
+
+There is no concept of the `Rgb` group type, the stream element is not represented by its logical type but rather it is decomposed in its "lowest level" fields (r, g and b) and reported as separate signals. This suggests that more complex groups (i.e. nested groups section 8 or other types) will be "flattened" in the same way.
+Accordingly to examples in sections 1-6, signals of logical streams are not grouped and no abstraction level is provided.
+Indeed, the actual detailed representation of streams is used in the waveforms.
+Moreover, streams with throupughts higher than 1 may lead to an explosion of number of separate signals in the waveforms, making inspection even more disorganized. With reference to the example, `stream2_type` as a throuput of 2 so the data bus is duplicated (2 groups of `Rgb` can be sent every clock cycle). This is translated internally as 2 bits of strobe and 6 parallel data buses without any grouped representation.
+Finally, both logical and physical stream implementations (`PhysicalStreamDetailed` and `PhysicalStream`) are displayed in the waveforms. Although no clear distinction between them is visible.
+
+| ![Tydi HelloWorldRgb in waveforms](./images/tydi_hello_world/hello_world_waves.png)                                          |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| Fig. 18 - *Tydi HelloWorldRgb module in waveforms. Left: logical streams. Right: physical IO ports for streams tydi streams* |
 
 ### 7.2. Tydi HelloWorldRgb in HGDB
 
-- Same issues of chisel examples with hgdb: ERROR value displayed, only Object name, no information about the type of the signals (i.e. UInt, Vec, Bundle, etc...) and so on...
-- But also the good things: structure preserved. For example, the `Rgb` group
-- No direction information
-- No information about stream characteristics (i.e. throughput, complexity, etc...)
+The HGDB debugger still preserves the same issues addressed in the chisel examples. Thus, every chisel module is considered a generic Object, no information about the actual type and direction of the signals is provided (i.e. UInt, Vec, Bundle, Wire, Input, Output, etc...). However, the hierarchy of bundles and vecs can be still fully inspected.
+
+Within the tydi context, none of the stream characteristics are available such as the throuput and complexity level of a tydi stream. As addressed in the waveform viewers, also here no distinction between logical and physical streams can be made (both are Object).
 
 | ![Tydi HelloWorldRgb in HGDB](./images/tydi_hello_world/hello_world_hgdb.png) |
 | ----------------------------------------------------------------------------- |
 | Fig. 19 - *Tydi HelloWorldRgb module in HGDB*                                 |
 
+## 8. Tydi PixelConverter: extending the HelloWorldRgb example
+
+The `PixelConverter` extends the `HelloWorldRgb` example by implementing more complex data structures to represent a pixel.
+In particular, it implements a tydi union to define a color variant for a pixel and it makes use of templates to define its types.
+It also uses nested groups to define the pixel type.
+
+As it can be seen from the code snippet below, tydi-lang facilitates to declare complex types in a structured and concise format. Templates enhance the abstraction level, allowing to define a type once and use it in multiple places with different characteristics. For example, the `Float` type can be used to define different custom floating point types with different mantissa and exponent sizes.
+
+```cpp
+// ....
+Group Rgb<color_depth: int> {
+  color_channel_t = Bit(color_depth);
+  r: color_channel_t;
+  g: color_channel_t;
+  b: color_channel_t;
+}
+
+Union Color<color_depth: int> {
+  rgb_t = Rgb<color_depth>;
+  rgb: rgb_t;
+  gray: rgb_t.color_channel_t; // it is only one channel
+}
+
+Group UInt<n: int> { value: Bit(n); }
+
+Group Float<n_mantissa: int, n_exponent: int> {
+  sign: Bit(1); // anonymous field, 0 is positive, 1 is negative
+  mantissa: UInt<n_mantissa>;
+  exponent: UInt<n_exponent>;
+}
+
+Group Pos { x: Float<23, 8>; y: Float<23, 8>; }
+
+Group Pixel {
+  pos: Pos;
+  color: Color<color_depth>;
+}
+// ....
+```
+
+### 8.1. Tydi PixelConverter in waveforms
+
+As expected from the previous examples, the nested groups defining a pixel are flattened into their lowest level fields as shown in fig. 20. This example introduces also the use of unions which can be used to define a variant type, in this example the color variant of a pixel. From the waveform it is difficult to understand what variant is currently selected. In order to do that, the user must manually understand the association between the tag field value and the union variants. It is clear to see that this can not be a trivial task for large unions.
+
+A better representation of unions and nested groups is therefore needed to improve the readability of the waveforms.
+
+| ![Tydi PixelConverter in waveforms](./images/tydi_pixel_converter/pixel_converter_waves.png) |
+| -------------------------------------------------------------------------------------------- |
+| Fig. 20 - *Tydi PixelConverter module in waveforms*                                          |
+
+### 8.2. Tydi PixelConverter in HGDB
+
+Fig. 21 shows that also the hgdb debugger is not able to well represent the union variants type.
+This is however something expected since the tydi union is a logic type characterizing the tydi specification that does not have a direct chisel translated representation.
+
+| ![Tydi PixelConverter in HGDB](./images/tydi_pixel_converter/pixel_converter_hgdb.png) |
+| -------------------------------------------------------------------------------------- |
+| Fig. 21 - *Tydi PixelConverter module in HGDB*                                         |
+
+## 9. Tydi PipelineSimple: filter and aggregate some values
+
+This example implements a two stages pipeline that filters and aggregates some values.
+It uses two modules to perform the stages and a top module that instantiates the stages and connects their streams.
+This is also the first example that uses two types of streams, the top has indeed a `NumberGroup` stream as input and a `Stats` stream as output. Whereas all the previous examples used only streams sending the same type of data.
+
+```cpp
+// package pipelineSimple_types
+NumberGroup_stream = Stream(NumberGroup, t=1.0, d=1, c=1);
+Stats_stream = Stream(Stats, t=1.0, d=1, c=1);
+
+// Tydi-lang code
+// #Interface for the non negative filter: df.filter(col("value") >= 0)#
+streamlet NonNegativeFilter_interface<in_t: type> {
+    std_in : pipelineSimple_types.NumberGroup_stream in;
+    std_out : pipelineSimple_types.NumberGroup_stream out;
+}
+
+// #Implementation of df.filter(col("value") >= 0)#
+impl NonNegativeFilter of NonNegativeFilter_interface<pipelineSimple_types.NumberGroup_stream> {}
+
+// #Interface for the agg function#
+streamlet Reducer_interface {
+    std_in : pipelineSimple_types.NumberGroup_stream in;
+    std_out : pipelineSimple_types.Stats_stream out;
+}
+
+// #Implementation of the agg function#
+impl Reducer of Reducer_interface {}
+
+// #Top level interface#
+streamlet PipelineSimple_interface {
+    std_in : pipelineSimple_types.NumberGroup_stream in;
+    std_out : pipelineSimple_types.Stats_stream out;
+}
+// #Top level implementation. It instantiates the subcomponents and connects them together#
+impl PipelineSimple of PipelineSimple_interface {
+    // Instantiate the subcomponents
+    instance filter(NonNegativeFilter);
+    instance reducer(Reducer);
+
+    // Connect the subcomponents
+    self.std_in => filter.std_in;
+    filter.std_out => reducer.std_in;
+    reducer.std_out => self.std_out;
+}
+```
+
+### 9.1. Tydi PipelineSimple in waveforms
+
+Fig. 22 includes the output waveforms of a PipelineSimple testbench and highlights the logical streams.
+As depicted by the figure, there is no clear distinction between the two types of stream in the Reducer module. Although the difference is clearly visible from the tydi-lang code, the designer can retrieve that only from the signal names. 
+
+| ![Tydi PipelineSimple in waveforms](./images/tydi_pipeline_simple/pipeline_simple_waves.png) |
+| -------------------------------------------------------------------------------------------- |
+| Fig. 22 - *Tydi PipelineSimple: Filter and Reducer (with 2 stream types) in waveforms.*      |
+
+### 9.2. Tydi PipelineSimple in HGDB
+
+Similarly to the waveforms and other signals according to the previous examples, also the HGDB debugger does not provide an intuitive representation of those streams.
+Hence, it makes really difficult to understand what types streams have and what structures they exchange.
+
+## 10. Tydi PipelineNestedGroup
+
+This example extends the PipelineSimple module with a tydi nested group.
+
+```cpp
+// #A composite type (like a struct) that contains a value associated with a timestamp#
+Group NumberGroup {
+    value: SInt_64_t;
+    time: UInt_64_t; 
+}
+// #A DateTimeGroup represents a specific date time#
+Group DateTimeGroup {
+    month: Month_t;
+    day: Day_t;
+    year: Year_t;
+    utc: UTC_t;
+}
+// #A NestedNumberGroup represents a number group with a nested date time group#
+Group NestedNumberGroup {
+    value: SInt_64_t;
+    time: UInt_64_t;
+    
+    numberGroup: NumberGroup; // nested group
+    date: DateTimeGroup; // nested group
+}
+NestedNumberGroup_stream = Stream(NestedNumberGroup, t=1.0, d=1, c=1);
+```
+It does not introduce any significant issues that were not already addressed in the previous examples.
+
+## 11. Tydi PipelineNestedStream
+
+The most complex tydi example is the `PipelineNestedStream` that extends the `PipelineNestedGroup` example with nested streams.
+Tydi logic groups can contain streams as fields, and therefore this allows to define nested streams that appear as simple named fields of the group at the logical level.
+
+PipelineNestedStream implements one example usage of nested streams: some fields associated to string of unknown lenght (stream of chars).
+```cpp
+// Define a char stream
+Char_t = Bit(8); // UInt<8>
+Char_stream = Stream(Char_t, t=3.0, d=1, c=1); // Stream of 3 chars per clock cycle
+
+// #The Number Group from PipelineNestedGroup extended with a nested stream#
+Group NumberGroupWithString {
+    numberNested: pipelineNestedGroup_types.NumberGroup;
+    date: pipelineNestedGroup_types.DateTimeGroup;
+    my_custom_string: Char_stream;
+}
+
+// #The Stats from PipelineSimple extended with a nested stream#
+Group StatsWithString {
+    stats: pipelineSimple_types.Stats;
+    my_custom_string: Char_stream;
+}
+NumberGroupWithString_stream = Stream(NumberGroupWithString, t=1.0, d=1, c=1);
+Stats_stream = Stream(StatsWithString, t=1.0, d=1, c=1);
+```
+
+### 11.1. Tydi PipelineNestedStream in waveforms
+
+Fig. 23 reports the waveforms for the aforementioned example.
+The figure highlights the structure of the `NumberGroupWithString` streams.
+In the waveform representation a nested (child) stream is shown as a separate stream, that is independent from the parent stream.
+Despite nested streams are internally implemented as separate signals, due to the limitations of the low level HDLs, tydi-lang provides a logical hierarchical representation of parent and child streams.
+Current trace files do not support this logic level representation, and the association is hidden in the signal names only, making it difficult to understand streams relationships.
+With more complex circuits this issue mae become even more relevant.
+A new, higher level representation may improve readability and reduce debugging effort.
+
+| ![Tydi PipelineNestedStream in waveforms](./images/tydi_pipeline_nested_stream/pipeline_nested_stream_waves.png) |
+| ---------------------------------------------------------------------------------------------------------------- |
+| Fig. 23 - *Tydi PipelineNestedStream: NumberGroupWithString and StatsWithString in waveforms.*                   |
+
+### 11.2. Tydi PipelineNestedStream in HGDB
+
+On the contrary of the waveforms, the HGDB debugger is able to preserve the hierarchical structure of nested streams.
+However, it still has the same issues already addressed in the previous examples.
+
+| ![Tydi PipelineNestedStream in HGDB](./images/tydi_pipeline_nested_stream/pipeline_nested_stream_hgdb.png)                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fig. 24 - *Tydi PipelineNestedStream preserves the hierarchical structure of nested streams in HGDB. Nested NumberGroup (numberNested, blue) and nested Char_stream (my_custom_string, green) are childs "variables" of NumberGroupWithSting (inStream, red).* |
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)
@@ -476,8 +688,16 @@ Fig. 18 shows the waveform representation of the `HelloWorldRgb` example.
 
 [^3]: *chisel3.util.Enum documentation* en. [![chisel3.util.Enum](https://img.shields.io/badge/Web_Page-chisel3.util.Enum-blue)](https://javadoc.io/static/edu.berkeley.cs/chisel3_2.12/3.3.0-RC1/chisel3/util/Enum.html)
 
-[^4]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hard-ware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
+[^4]: Keyi Zhang, Zain Asgar, and Mark Horowitz. **“Bringing source-level debugging frameworks to hardware generators”**. In: *Proceedings of the 59th ACM/IEEE Design Automation Conference*. DAC’22: 59th ACM/IEEE Design Automation Conference. San Francisco California: ACM, July 10, 2022, pp. 1171–1176. [![10.1145/3489517.3530603](https://zenodo.org/badge/DOI/10.1145/3489517.3530603.svg)](https://dl.acm.org/doi/10.1145/3489517.3530603)
 
 [^5]: *Memories* | *Chisel*. en. [![memories-chisel](https://img.shields.io/badge/Web_Page-Memories_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/memories)
 
 [^6]: *circt.stage.ChiselStage* en. [![chiselstage](https://img.shields.io/badge/Web_Page-circt.stage.ChiselStage-blue)](https://javadoc.io/doc/edu.berkeley.cs/chisel3_2.13/latest/index.html)
+
+[^7]: Yongding Tian et al. **“Tydi-lang: A Language for Typed Streaming Hardware”**. In: *Proceedings of the SC ’23 Workshops of The International Conference on High Performance Computing, Network, Storage, and Analysis*. Denver CO USA: ACM, Nov. 12, 2023, pp. 521–529. ISBN: 9798400707858. [![10.1145/3624062.3624539](https://zenodo.org/badge/DOI/10.1145/3624062.3624539.svg)](https://doi.org/10.1145/3624062.3624539)
+
+[^8]: Casper Cromjongh et al. **“Tydi-Chisel: Collaborative and Interface-Driven Data-Streaming Accelerators”**. In: *2023 IEEE Nordic Circuits and Systems Conference (NorCAS*). Aalborg, Denmark: IEEE, Oct. 31, 2023, pp. 1–7. ISBN: 9798350337570. [![10.1109/NorCAS58970.2023.10305451](https://zenodo.org/badge/DOI/10.1109/NorCAS58970.2023.10305451.svg)](https://doi.org/10.1109/NorCAS58970.2023.10305451)
+
+[^9]: A implementation of Tydi interfaces and concepts in Chisel. [![Tydi-Chisel](https://img.shields.io/badge/Github_Page-Tydi--Chisel-green)](https://github.com/ccromjongh/Tydi-Chisel)
+
+[^10]: The Tydi-lang-2-Chisel transpiler. [![tydi-lang-2-chisel](https://img.shields.io/badge/Github_Page-tydi--lang--2--chisel-green)](https://github.com/ccromjongh/tydi-lang-2-chisel)

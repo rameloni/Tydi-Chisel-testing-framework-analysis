@@ -321,14 +321,14 @@ class Reducer extends Reducer_interface {
 
   // Nested stream
   outStream.el.my_custom_string := inStream.el.my_custom_string
-  when(inStream.el.my_custom_string.valid) {
-    inStream.el.my_custom_string.data.foreach(x => printf(cf"${x.value}%c"))
-    //    when(inStream.el.my_custom_string.last.last === 1.U) {
-    when(inStream.el.my_custom_string.last.exists(x => x === 1.U)) {
-      printf("\n")
+  // when(inStream.el.my_custom_string.valid) {
+  //   inStream.el.my_custom_string.data.foreach(x => printf(cf"${x.value}%c"))
+  //   //    when(inStream.el.my_custom_string.last.last === 1.U) {
+  //   when(inStream.el.my_custom_string.last.exists(x => x === 1.U)) {
+  //     printf("\n")
 
-    }
-  }
+  //   }
+  // }
 }
 
 
