@@ -114,7 +114,7 @@ class PipelineNestedTester(dut: PipelineNestedTestWrapper) {
 } // end class PipelineNestedTester
 
 object PipelineNestedTester {
-  def apply(dut: => PipelineNestedTestWrapper, printDebug: Boolean = false): Unit = {
+  def apply(dut: => PipelineNestedTestWrapper): Unit = {
     new PipelineNestedTester(dut).apply()
   }
 } // end object PipelineNestedTester

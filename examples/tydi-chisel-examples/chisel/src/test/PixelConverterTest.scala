@@ -25,7 +25,7 @@ class Pixel_converterTestWrapper(module: => Pixel_converter,
 }
 
 // Tester for the Adder module
-class Pixel_converterTester(dut: Pixel_converterTestWrapper, stepsFor: Int = 1, printDebug: Boolean = false) {
+class Pixel_converterTester(dut: Pixel_converterTestWrapper, stepsFor: Int = 1) {
   val pixel_t = new Pixel()
 
   case class Rgb(r: Int, g: Int, b: Int)
@@ -69,7 +69,7 @@ class Pixel_converterTester(dut: Pixel_converterTestWrapper, stepsFor: Int = 1, 
     pixel_t.Lit(_.color -> color, _.pos -> pos)
   }
 
-  def apply: Unit = {
+  def apply(): Unit = {
     // Init the streams
     dut.io.inputStream.initSource().setSourceClock(dut.clock)
     dut.io.outputStream.initSink().setSinkClock(dut.clock)
@@ -99,8 +99,8 @@ class Pixel_converterTester(dut: Pixel_converterTestWrapper, stepsFor: Int = 1, 
 } // end class Pixel_converterTester
 
 object Pixel_converterTester {
-  def apply(dut: => Pixel_converterTestWrapper, stepsFor: Int = 1, printDebug: Boolean = false): Unit = {
-    new Pixel_converterTester(dut, stepsFor, printDebug).apply
+  def apply(dut: => Pixel_converterTestWrapper, stepsFor: Int = 1): Unit = {
+    new Pixel_converterTester(dut, stepsFor).apply()
   }
 } // end object Pixel_converterTester
 

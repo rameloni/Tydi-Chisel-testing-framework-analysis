@@ -38,7 +38,7 @@ class HelloWorldTester(dut: HelloWorldTestWrapper, stepsFor: Int = 1, printDebug
 
   val rgb_t = new Rgb()
 
-  def apply: Unit = {
+  def apply(): Unit = {
     // Init the streams
     dut.io.inputStream.initSource().setSourceClock(dut.clock)
     dut.io.outputStream.initSink().setSinkClock(dut.clock)
@@ -53,7 +53,7 @@ class HelloWorldTester(dut: HelloWorldTestWrapper, stepsFor: Int = 1, printDebug
           // Enqueue the input stream
           dut.io.inputStream.enqueue(rgb)
 
-          if (dut.io.input2Stream.ready.peek().litToBoolean == true)
+          if (dut.io.input2Stream.ready.peek().litToBoolean)
             // Send the same input in the second stream
             dut.io.input2Stream.enqueueElNow(rgb)
 
@@ -63,7 +63,7 @@ class HelloWorldTester(dut: HelloWorldTestWrapper, stepsFor: Int = 1, printDebug
 
 object HelloWorldTester {
   def apply(dut: => HelloWorldTestWrapper, stepsFor: Int = 1, printDebug: Boolean = false): Unit = {
-    new HelloWorldTester(dut, stepsFor, printDebug).apply
+    new HelloWorldTester(dut, stepsFor, printDebug).apply()
   }
 } // end object HelloWorldTester
 

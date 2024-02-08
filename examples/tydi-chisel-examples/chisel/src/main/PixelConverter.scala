@@ -162,8 +162,8 @@ class Pixel_converter extends Pixel_converter_interface {
 
     }.otherwise {
       val inRgb = inputStream.el.color.rgb
-      outputStream.el.color.gray := rgb2gray(inRgb.r, inRgb.g, inRgb.b)
-
+      val gray = rgb2gray(inRgb.r, inRgb.g, inRgb.b)
+      outputStream.el.color.gray := gray
       val outRgb = outputStream.el.color.rgb
       outRgb.r := 0.U
       outRgb.g := 0.U
