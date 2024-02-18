@@ -1,12 +1,13 @@
-# A detailed analysis of Tydi-Chisel representations in testing frameworks
-This section proposes an analysis of how specific elements of Tydi-Chisel are represented in different testing frameworks. 
-This section aims to identify the weaknesses in the current representations with particular focus on the **mismatch** between the Chisel **source code** and the testing **framework representation**. Namely, what the designer writes in Chisel and Tydi and what they see in the testing framework.
+# A detailed analysis of Chisel and Tydi-Chisel representations in testing frameworks
+This section proposes an analysis of how specific elements of Chisel and Tydi-Chisel are represented in different testing frameworks. 
+This section aims to identify the weaknesses in the current representations with particular focus on the **gap** between the Chisel **source code** and the testing **framework representation**.
+Namely, what the designer writes in Chisel and Tydi, and what they see in the testing framework.
 
 > **Note:** A more general analysis about each testing frameworks is provided in each respective directory in [results](/results).
 
 > **Note:** Source code of the examples is available in the [examples](../../examples/) directory.
 
-- [A detailed analysis of Tydi-Chisel representations in testing frameworks](#a-detailed-analysis-of-tydi-chisel-representations-in-testing-frameworks)
+- [A detailed analysis of Chisel and Tydi-Chisel representations in testing frameworks](#a-detailed-analysis-of-chisel-and-tydi-chisel-representations-in-testing-frameworks)
   - [1. Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules](#1-adder-a-parametrized-module-that-uses-bundlevec-and-array-to-group-signals-and-instantiate-multiple-modules)
     - [1.1. Adder in waveforms](#11-adder-in-waveforms)
     - [1.2. Adder in HGDB](#12-adder-in-hgdb)
@@ -36,8 +37,11 @@ This section aims to identify the weaknesses in the current representations with
   - [11. Tydi PipelineNestedStream](#11-tydi-pipelinenestedstream)
     - [11.1. Tydi PipelineNestedStream in waveforms](#111-tydi-pipelinenestedstream-in-waveforms)
     - [11.2. Tydi PipelineNestedStream in HGDB](#112-tydi-pipelinenestedstream-in-hgdb)
+- [Summary](#summary)
+  - [Chisel elements](#chisel-elements)
+  - [Tydi elements](#tydi-elements)
+  - [Other findings](#other-findings)
 - [References](#references)
-
 
 ## 1. Adder: a parametrized module that uses `Bundle`/`Vec` and `Array` to group signals and instantiate multiple modules
 Chisel provides the `Bundle` and `Vec`[^1] classes to group signals together of different and same type respectively. 
@@ -62,9 +66,8 @@ val sum = Wire(Vec(n, Bool()))
 // ... 
 ```
 
-A simpler carry propagate `Adder` consists of a concatenation of `FullAdder` modules. 
-Those are instantiated using an `Array` of `FullAdder` chisel modules. 
-This allows to write a single line of code to instantiate n-full adders.
+A simpler carry propagate `Adder` consists of a concatenation of an `Array` of `FullAdder` modules, similarly to `generate` in verilog.
+This allows to write a single line of code to instantiate n full adders.
 
 ```scala
 // ...
@@ -74,14 +77,14 @@ val FAs = Array.fill(n)(Module(new FullAdder()))
 ```
 Since Chisel is built on top of the scala language, its constructs can be used to manipulate the Chisel elements.
 Bundle, Vec and Array can be simply accessed in the code as named fields and indexed elements. 
-This is shown in the following code snippet. 
 Moreover, for loops and integer variables can be used to iterate over arrays and vectors.
+This is shown in the following code snippet. 
 
 ```scala
   // ...
-  carry(0) := io.Cin // accessing and assigning a vector element through indexing
+  carry(0) := io.Cin          // accessing and assigning a vector element through indexing
   // ...
-  for (i <- 0 until n) { // use for loop to iterate over arrays
+  for (i <- 0 until n) {      // use for loop to iterate over arrays
     // ...
     FAs(i).io.cin := carry(i) // indexing an array of modules and accessing its named fields
     carry(i + 1) := FAs(i).io.cout
@@ -89,17 +92,17 @@ Moreover, for loops and integer variables can be used to iterate over arrays and
   }
   // ...
   io.Sum := sum.asUInt
-  io.Cout := carry(n) // use parametrized integer variable to access vector element
+  io.Cout := carry(n)         // use parametrized integer variable to access vector element
 ```
 
 The previous code snippets illustrate how a developer can declare, access, and manipulate `Bundle`, `Vec`, and `Array`. 
 These basic constructs arise the abstraction level when compared to low-level HDLs and allow to orgnaize the code in a more structured and concise format.
-In languages like Verilog, concepts similar to `Bundle` and `Array` of modules do not exist, despite the presence of bit vectors and arrays of bits (`Vec`).
+In languages like Verilog, concepts similar to `Bundle` do not exist, despite the presence of bit vectors and arrays of bits (`Vec`).
 
 ### 1.1. Adder in waveforms
 
 Fig. 1 shows a bundle representation in waveforms.
-In contrast to its chisel access. Its elements are not grouped by default under an `io` group and they are not represented as named fields. 
+In contrast to its chisel "view", its elements are not grouped by default under an `io` group and they are not displayed as named fields. 
 Yet, they are drawn as separate parallel signals and the parent bundle name can be retrieved from the signal name convention (`bundleName_signalName`). 
 
 | ![Adder IO bundle](./images/adder/adder_bundle.png)                  |
@@ -108,8 +111,8 @@ Yet, they are drawn as separate parallel signals and the parent bundle name can 
 
 Similarly to bundles, also the waveform representation of vec does not match the code structure as it can be inspected in fig. 2. 
 Indeed, vector elements are not grouped and displayed as indexed arrays, but they are represented as separate parallel signals.
-Similarly to bundle the actual chisel `val` can be retrived from the signal name followed by an underscore and index (`name_i`).
-Using `UInt(n.W)` instead of `Vec(n, UInt(1.W))` produces a different waveform representation more similar to a vector (see io_A in fig. 3). 
+Similarly to bundle the actual chisel `val`, associated to a vec, can be retrived from the signal name followed by an underscore and index (`name_i`).
+Using `UInt(n.W)` instead of `Vec(n, UInt(1.W))` produces a different waveform representation more similar to a vector (see io_A in fig. 3).
 However, `UInt` cannot be indexed in chisel.
 Hence, it is not possible to access individual bits of a `val carry = Wire(UInt((n+1).W))` in the same way as `val carry = Wire(Vec(n + 1, UInt(1.W))))`.
 
@@ -139,8 +142,8 @@ It does not raise issues while accessing the old signals since in Chisel:
   val sum = Wire(Vec(n, Bool()))
   val sum_2 = Wire(Vec(n, UInt(1.W)))
 ```
-However, this update raises issues while inspecting signal names from waveform viewers due to the naming convention used in the translation to FIRRTL.
-After I run the simulation with this new signals, such a simple addition to the code surprisingly affected the waveform signal names, despite the fact that the rest of chisel code is untouched.
+However, this update raises issues while inspecting signal names from waveform viewers due to the naming convention used for the translation to FIRRTL.
+After I run the simulation with this new signals, such a simple addition to the code surprisingly affected the waveform signal names, despite the fact that the rest of chisel code remained untouched.
 The signal (`val sum`) changed name in the viewer as shown in fig. 4. 
 Since its original name is now not present anymore, the signal disappeared from the waveform viewer. 
 Specifically, the old `sum_i` (`sum(i)` in chisel) is renamed to `sum__i`, it conflicted with the `val sum_2` in the FIRRTL representation.
@@ -151,7 +154,8 @@ As a consequence, FIRRTL naming convention makes more difficult to understand wh
 | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Fig. 4 - *Some signal names in chisel causes name conflicts in the FIRRTL representation which may lead to confusion in waveforms* |
 
-The code snippet below and fig. 5 provide another example of naming issues. Here, a new wire named `FullAdder` and a module `FullAdder_5` are declared.
+The code snippet below and fig. 5 provide another example of naming issues.
+Here, a new wire named `FullAdder` and a module `FullAdder_5` are declared.
 From fig. 5 it is counterintuitive to understand wether the `FullAdder` is used for the module `FAs(0)` or for the wire `FullAdder`. Similarly, it is impossible to establish if `FullAdder_5` is whether the 5th element of the array `FAs` or just a separate module `FullAdder_5`.
 
 Going more in depth, this example shows additional problems:
@@ -174,31 +178,31 @@ val FullAdder_5 = Module(new FullAdder())
 | Fig. 5 - *Another example in which some signal names in chisel causes confusion in waveforms* |
 
 ### 1.2. Adder in HGDB
+Fig. 6.1 and 6.2 shows the HGDB-debugger snapshot for the `Adder` and `FullAdder` modules respectively.
+Signals inside a bundle are grouped together under the bundle name and shown as named fields (i.e. `io`).
+Similarly, elements of a vec are grouped as an array, preserving a structured representation.
+However, in both cases bundle and vec are not shown with their real chisel type (`Bundle` and `Vec`) but instead they are associated to `Object` and `Array` respectively.
+Some vec signals, such as carry, have an overcomplex structure.
+Although a carry is simply a vec of `UInt`, the debugger shows other values such as clock, dumpfile etc.
+At the same time, other vec signals (`sum_2`) are displayed correctly.
 
-In `Adder` simulated by Icarus (fig. 6.1 and 6.2):
-- Elements of a bundle are grouped under the bundle name (i.e. `io`) and shown as named fields.
-- Vec elements are grouped as an array of signals, however it still has some issues. Using Carry as example:
-  - It is shown to be an array (even though it is more properly a Vec in chisel)
-  - It has an overcomplicated structure. Carry is simply a Vector of UInts, but it can be seen (from the debugger) that it has clock, dumpfile etc. and aslo references to io signals.
-  - Inspect its values is not possible. As shown in fig. 6.1, an Error value is displayed.
-  - Similar results for `sum` 
-- However another vector is shown properly (`sum_2`), it is correctly represented as an array (even though it is actually a Vec) of UInts. Integer values are shown instead of not Error.
-- There is no issue related to the naming as happened in the waveform representations:
-  - for example, the third element of `sum` is `sum[2]` while the field `A` of `io` is inspected as a "child" of `io`. This removes the conflict, introduced by the vcd dump from chiseltest, with the other signals `io_A` and `sum_2`.
-- Only the hierarchy of bundles and vec can be fully inspected
-- No access or reference from top modules to submodules. I did not find a way to step into, so if I want to inspect signals of a submodule I need to place breakpoint in one of its line (fig. 6.2).
-- Fig. 6.2. reveals another issue: there is no reference to internal `val`s of a module. There are only references to chisel hardware types (i.e. `carry` in `Adder`) and no way to inspect thema  from the debugger (this also happened for the waveforms).
-- No information about the signals width, no information about wire/reg
-- io is not detected to be a bundle
-- No information about the type of the signals (i.e. UInt, Vec, Bundle, etc...)
+In contrast to waveforms, hgdb does not raise any issue related to the naming convention used.
+The conflict, between `io_A` and `io.A`, is solved now.
+
+Only the hierarchy of bundles and vec can be inspected at a given time.
+There is no access nor reference to child modules.
+In order to inspect sub signals, someone needs to place a breakpoint in one of the submodule lines as I did in fig. 6.2 for FullAdder.
 
 | ![Adder in HGDB](./images/adder/adder_hgdb_icarus.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_icarus.png) |
 | --------------------------------------------------------- | -------------------------------------------------------------- |
 | Fig. 6.1 - *Adder in HGDB using icarus backend simulator* | Fig. 6.2 - *FullAdder in HGDB using icarus backend simulator*  |
 
-In `Adder` simulated by Verilator (fig. 7.1 and 7.2), some differences from Icarus:
-- Vec elements as `carry` and `sum` are properly represented without any additional (non existing) sub-information.
-- However, `Error` is displayed for those signals.
+Fig. 7.1 and 7.2 show how vec elements (i.e. carry and sum) are properly represented without any additional (non existing) sub-information.
+Fig. 7.2 highlights a new issue: an internal `val` of a module is not accessed.
+There are only references to chisel hardware types (`IO`, `Wire`, `Reg`). 
+
+Both backends do not seem to provide proper values associated to signals, an ERROR is displayed multiple times.
+In addition to that, they do not display information about the width of the signals and hardware type (i.e. `Wire(UInt(8.W))`).
 
 | ![Adder in HGDB](./images/adder/adder_hgdb_verilator.png)    | ![FullAdder in HGDB](./images/adder/fullAdder_hgdb_verilator.png) |
 | ------------------------------------------------------------ | ----------------------------------------------------------------- |
@@ -209,10 +213,10 @@ Finally, the icarus crashes after the second step of simulation is performed, wh
 ## 2. DetectTwoOnes: a simple finite state machine that uses `ChiselEnum` to represent the states
 `DetectTwoOnes` is an example FSM that uses enumerations to encode its state. 
 Chisel provides two ways to represent enumerations: `ChiselEnum` and `Enum`.
-The first is used in this circuit while the second is used in the next example.
+The first is used in this circuit while the second is used in the next example (section [3](#3-parity-using-enum-instead-of-chiselenum)).
 
-The ChiselEnum[^2] type is a chisel construct that helps limit errors when encoding numeric values into names (e.g. opcodes, mux selector, states etc...).
-As shown in the code, the enum hide the actual numeric value of its variants, arising the abstraction level and improving safety.
+The ChiselEnum[^2] type is a chisel construct that helps to limit errors while encoding numeric values into names (e.g. opcodes, mux selector, states etc...).
+As shown in the code, the enum hides the actual numeric value of its variants, arising the abstraction level and improving safety.
 Two different ChiselEnum objects represent two different types.
 
 ```scala
@@ -230,11 +234,11 @@ Thus, Chisel hides the knowledge of the actual numeric value of the state.
 Fig. 8 and 9 raises two issues in the waveform representation of a state register encoded with a `ChiselEnum`: 
 1. No information about the state names (i.e. `sNone`) is available. 
   Designers must manually map the number dispayed to the actual state name by looking at the order of the states in the `ChiselEnum` declaration. 
-  Although it does not seem a problem with few enum variants, this mapping may not be trivial for large enumerations.
+  Although it does not seem a problem with few enum variants, this association may not be trivial for large enumerations.
 2. Besides that, traces from some backends (i.e. Treadle and Verilator) classify registers as `wire`s instead of `reg`, such as the state val in the example.
   In fig. 8 the state val is describred as a wire, while in fig. 9 it is described as a register.
   This unexpected result raises additional discrepancy between the chisel code and its representation in waveforms.   
-3. Finally, fig. 9 introduces another difference related to the used backend. 
+3. Finally, fig. 9 introduces another difference related to the backend used. 
   A new wire, absent in the code, is instead displayed (`_GEN_2`).
   This is generated in the verilog file used by Verilator and Icarus to support the state assignment.
   Conversely, this information is not available to the user and it may mislead them.
@@ -250,10 +254,14 @@ Fig. 8 and 9 raises two issues in the waveform representation of a state registe
 ### 2.2. DetectTwoOnes in HGDB
 
 Fig. 10 shows a snapshot of the FSM internal signals from the HGDB debugger.
-- Yet, no information about the state names. Only raw values. Also it is not possible what are the possible values of the states.
-- No signal width information.
-- Also here not possible to distinguish if a signal is a register or a wire from the left panel. This is although possible from the code. Since the user has a view of both code and debugger, it is not a big issue as in the waveforms.
-- Here, I had a new problem while trying to simulate this example through HGDB. The FIRRTL representation, generated through `ChiselStage`[^6], contains some temp nodes (_T) that are propagated in the toml file used to generate the symbol table. This will raise errors like `Unable to validate breakpoint expression: !reset && !io_in && _T_5 && !_T_2`. To fix this I had to replace those strings with "1" in the toml file.
+1. Yet, no information about the state names, but only raw values without any information about their association to the variant names.
+2. Also here, it is not possible to distinguish if a signal is a register or a wire from the left panel.
+   This is although possible from the code.
+   Since the user has a view of both code and debugger, it may not be considere as the same issue as in the waveforms.
+3. Here, I met a new issue while trying to simulate this example through HGDB. 
+   The FIRRTL representation, generated through `ChiselStage`[^6], contains some temp nodes (_T) that are propagated in the toml file used to generate the symbol table.
+   This will raise errors like `Unable to validate breakpoint expression: !reset && !io_in && _T_5 && !_T_2`.
+   To fix this I had to replace those strings with "1" in the toml file.
 
 | ![FSM from HGDB](./images/fsm/fsm_hgdb.png)                    |
 | -------------------------------------------------------------- |
@@ -304,11 +312,11 @@ In particular, the example includes the following types of assignment:
 ### 4.1. Functionality in waveforms
 
 Fig. 11 illustrates the waveforms from a testbench of the Functionality module.
-They shows that there is no difference between the 5 type assignments.
-This is expected since the actual ports are of a `UInt` type, that is the only information passed to the backend.
-Nonetheless, while dealing with chisel code, it would be useful to have a recall of what is the driving logic of a signal.
-Although it might not be the most important features, this would allow to immediately insight the logic behind a signal.
-Indeed, this is something available in code debuggers, such as hgdb[^4].
+It shows that there is no difference between the 5 type assignments.
+This is expected though, since the actual ports are of a `UInt` type, that is the only information passed to the backend.
+
+Nonetheless, while dealing with chisel code, it would be useful to have a recall to what is the driving logic of the selected signal.
+Although it might not be the most important feature, this would allow to immediately insight the logic behind a value.
 
 | ![Functionality waveforms](./images/functionality/functionality_waves.png) |
 | -------------------------------------------------------------------------- |
@@ -316,21 +324,21 @@ Indeed, this is something available in code debuggers, such as hgdb[^4].
 
 ### 4.2. Functionality in HGDB
 
-- Similar to the waveforms there is no differenc between the 5 type assignments.
+Similarly to the waveforms, also here there is no difference between the 5 type assignments.
 
 | ![Functionality in HGDB](./images/functionality/functionality_hgdb.png)  |
 | ------------------------------------------------------------------------ |
 | Fig. 12 - *Functionality in HGDB using the verilator backend simulation* |
 
 ## 5. Memory: a simple memory module that wraps the `Mem` chisel module
-Chisel provides several constructs to represent memories[^5].
-The `Mem` module implements a random-access memory that with asynchronous read and synchronous write ports. 
+Chisel provides several constructs to represent memories as reported in the documentation page[^5].
+The `Mem` module implements a random-access memory with asynchronous read and synchronous write ports. 
 The `Memory` example serves to illustrate the `Mem` module representation in the testing tools.
 
 ### 5.1. Memory in waveforms
-Fig. 13.1 and 13.2 report frames of the waveforms from the same testbench of such a module, retrieved from vcd files dumped by treadle and verilator respectively. 
-It is immediate to see that the treadle backend does not dump the whole memory content in a VCD, but only the read and write ports (called here `pipeline_data_0`).
-Thus, it is not possible to inspect the memory content at any time step, but only when a read or write operation is performed and completed successfully.
+Fig. 13.1 and 13.2 report frames of the waveforms, from the same testbench of such a module, dumped by treadle and verilator respectively. 
+It is immediate to see that the treadle backend does not dump a variable to represent the whole memory content in a VCD, but it only dumps reading and writing ports (called here `pipeline_data_0`).
+Thus, it is not possible to inspect the memory content at any time step, but only one value at each clock step is visible (when a read or write operation is performed and completed successfully).
 By contrast, verilator provides a better representation of the content of the same memory block, although, memory arrays are not grouped together by default as visible in fig. 9.2. 
 Thus, large memories may be difficult to inspect in waveforms due to representation which is not as concise as it could be.
 
@@ -342,23 +350,27 @@ In order to understand why the two backends produce different results, I inspect
 Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
 The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
 
-> **Note:** The memory example will be extended in order to include all memories presented in the chisel explanation page[^5].
+> **Note:** The memory example will be extended in the near future in order to include all memories presented in the chisel explanation page[^5].
 
 ### 5.2. Memory in HGDB
+It is clear to see, from fig. 14, that also HGDB does not provide a good visualization of the memory content. Yet, only input/output ports can be inspected.
 
-- No information about the memory content
-- Similar to waveforms (fig. 13.1) only io ports are available
 | ![Memory in HGDB](./images/memory/memory_hgdb.png)                |
 | ----------------------------------------------------------------- |
 | Fig. 14 - *Memory in HGDB using the verilator backend simulation* |
 
 ## 6. Router: using chisel "typed" abstraction to represent circtuit components and characteristics
-The `Router` is the most complex among the selected examples.
+The `Router` is the most complex example between the ones selected.
 It uses classes and objects to represent and implement its components and characteristics.
-For example, an `object` at the top of the file is used to group the main characteristics of the router, providing a parametrized implementation. This can be viewed similar to parameters in Verilog modules.
-Moreover, Chisel allows to raise even more the abstraction level of a circuit: in this specific example, classes to describe read/write commands and packets are used, this means that the router is not composed by bare wires and registers, but chisel offers a virtual view of the circuit components.
+For example, an `object` at the top of the file is used to group the main characteristics of the router, providing a parametrized implementation.
+This can be seen as similar to parameters in Verilog modules.
+Moreover, Chisel allows to raise even more the abstraction level of a circuit: in this specific example, classes to describe read/write commands and packets are used.
+This means that the router is not composed by bare wires and registers, but chisel offers a virtual view of such "types".
 
-The following code snippet contains the class used for the IO interface and shows this abstraction level. As it can be seen, from the code perspective, the `in` and `outs` port are of `Packet` type. Similarly, the `read_routing_table_request` and `load_routing_table_request` are of `ReadCmd` and `WriteCmd` type respectively. This means that the router is not composed by bare wires and registers, but chisel offers a virtual view of such "types".
+The following code snippet contains the class used for the IO interface and shows this abstraction level.
+As it can be seen, from the code perspective, the `in` and `outs` port are of `Packet` type. 
+Similarly, the `read_routing_table_request` and `load_routing_table_request` are of `ReadCmd` and `WriteCmd` type respectively.
+
 ```scala
 class RouterIO(val n: Int) extends Bundle {
 
@@ -373,12 +385,16 @@ class RouterIO(val n: Int) extends Bundle {
 
 ### 6.1. Router in waveforms
 
-Fig. 15 proves immediately that the abstraction level of the router is not reflected in the waveform representation.
-First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it used to specify the router sizes.
+Fig. 15 proves immediately that the abstraction level of the router module is not reflected in the waveform representation.
+First of all, there is no reference to the object `Router` in the waveforms, although it is declared in the code and it is used to specify the router sizes.
 When the designer writes their blocks, they just use the actual values through the defined parameters (i.e. `val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))`)
-Furthermore, there is no information related to what signals are related to a Packet, WriteCmd or ReadCmd. Every type declared as a class is decomposed in its fields and represented as separate signals.
+Furthermore, there is no information about what signals are related to a Packet, WriteCmd or ReadCmd.
+Every type declared as a class is decomposed in its fields and represented as separate bit signals.
+Namely, values associated to a `Packet` wire are not of `DecoupledIO[Packet]` type.
 
 Taking into account the `ReadCmd` and `WriteCmd` classes, it is trivial to understand why this is an issue.
+The two classes share the address field.
+If the class type is dropped, it is really difficult to understand wether the address is associated to a `ReadCmd` or `WriteCmd`.
 ```scala
 class ReadCmd extends Bundle {
   val address = UInt(Router.addressWidth.W)
@@ -387,7 +403,7 @@ class WriteCmd extends ReadCmd {
   val data = UInt(Router.dataWidth.W)
 }
 ```
-Those classes have a common field `address`: looking at the figure, understanding whether `io_trad_routing_table_response` is a `ReadCmd` or not is far from trivial if only the waveforms (no comments, no code) are taken into account.
+The figure proves that: understanding whether `io_trad_routing_table_response` is a `ReadCmd` or not is far from trivial if only the waveforms (no comments, no code) are taken into account.
 
 
 | ![Router waveforms from treadle](./images/router/router_treadle_waves.png) |
@@ -395,17 +411,20 @@ Those classes have a common field `address`: looking at the figure, understandin
 | Fig. 15 - *Waveforms of the `Router` module using the treadle backend*     |
 
 
-Fig. 16 shows how a slightly better representation of the router can be obtained by manually grouping signals per type. Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires user knowledge and intervention any time something is changed in the code, leading to possible human mistakes. In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
+Fig. 16 shows how a slightly better representation of the router can be obtained by manually grouping signals per type.
+Nevertheless, this cannot be interpreted as a solution to the problem, since it is not given by default and it requires the user's knowledge and intervention any time something is changed in the code, leading to possible human mistakes.
+In addition, it does not solve the problem of the missing `Router` object and does not offer a typed representation.
 
 | ![Router waveforms from treadle with grouped signals](./images/router/router_treadle_waves_grouped.png)                       |
 | ----------------------------------------------------------------------------------------------------------------------------- |
 | Fig. 16 - *A slightly better (manually created) waveform representation of the `Router` module with signals grouped per type* |
 
 ### 6.2. Router in HGDB
+Also HGDB has no knowledge about the router characteristics declared in the `object Router` (i.e. `Router.addressWidth` and `Router.dataWidth`).
 
-- Also here, no reference to the Router characteristics (i.e. `Router.addressWidth` and `Router.dataWidth`)
-- No information about `Packet`, `ReadCmd` and `WriteCmd` types. This can be only inspected by looking at the fields and at the code: for example `load_routing_table` appears as an obkect with fields `bits.addr`, `bits.data`, `ready` and `valid`.
-- Everything is `Object` if contains some nested fields, otherwise it is a numeric type (no information if `UInt`, `Bool`... or width)
+No information about `Packet`, `ReadCmd` and `WriteCmd` types is provided.
+This can be only inspected by looking at the fields and at the code concurrently: for example `load_routing_table` appears as an object with fields `bits.addr`, `bits.data`, `ready` and `valid`.
+Every type in chisel that contains nested fields is an `Object` in HGDB, otherwise it is a simple numeric type without any information if `UInt`, `Bool` or `SInt` and without any width associated.
 
 | ![Router in HGDB](./images/router/router_hgdb.png)                |
 | ----------------------------------------------------------------- |
@@ -414,11 +433,11 @@ Fig. 16 shows how a slightly better representation of the router can be obtained
 ## 7. Tydi HelloWorldRgb: the simplest Tydi example
 
 The `HelloWorldRgb` is the simplest Tydi example. 
-It simply instantiates two streams of a group called `Rgb` and redirects its inputs to the output streams.
+It simply instantiates two streams of a group called `Rgb` and redirects the input streams to the output streams.
 
-An `Rgb` group is defined, in tydi-lang[^7], as a collection of 3 `color_channel_type` signals, each of them is a `Bit` of `color_depth` bits.
-As it can be seen from the following code snippet, tydi-lang allows to define Streams and connect them together in a single line of code, while hiding the complexity of the underlying chisel (backend) code.
-Once compiled to boilerplate code, the `Tydi-Chisel`[^8] [^9] library hides the complexity of the actual internal implementation providing logical wrappers `PhysicalStreamDetailed` that raises the level of abstraction.
+An `Rgb` group is defined, in tydi-lang[^7], as a collection of 3 `color_channel_type` signals (internally implemented as a `Bit` of `color_depth` bits).
+As it can be seen from the following code snippet, tydi-lang allows to define Streams and connect them together in few lines of code, while hiding the complexity of the underlying implementation code (chisel) of the streams.
+Once compiled to boilerplate code, the `Tydi-Chisel`[^8] [^9] library hides the complexity of the actual internal implementation providing logical wrappers (`PhysicalStreamDetailed`) that raises the level of abstraction.
 
 ```cpp
 // Define an rgb
@@ -450,7 +469,7 @@ impl helloworld_rgb of rgb_bypass {
 }
 ```
 
-Summarizing, the `HelloWorldRgb` example shows how tydi-lang can be used to declare composite data types and connection between streams, abstracting the actual implementation and behaviour of the circuit.
+Summarizing, the `HelloWorldRgb` example shows how tydi-lang can be used to declare composite data types and connection between streams, abstracting the actual implementation details and behaviour of the circuit.
 From the tydi perspective the user is sending `Rgb` groups through two tydi streams.
 The tydi-lang-2-transpiler[^10] generates chisel boilerplate code in which the user can specify the actual behaviour of core modules that are connected through tydi streams.
 The actual implementation of tydi streams is hidden by the Tydi-Chisel library which implements the tydi specification and integrates utilities to use streams in chisel.
@@ -461,11 +480,15 @@ Next sections show how these streams and data groups are represented in waveform
 Fig. 18 shows the waveform representation of the `HelloWorldRgb` example.
 The trace files have been generated using chiseltest, similarly to the previous examples.
 
-There is no concept of the `Rgb` group type, the stream element is not represented by its logical type but rather it is decomposed in its "lowest level" fields (r, g and b) and reported as separate signals. This suggests that more complex groups (i.e. nested groups section 8 or other types) will be "flattened" in the same way.
-Accordingly to examples in sections 1-6, signals of logical streams are not grouped and no abstraction level is provided.
+There is no concept of the `Rgb` group type, the stream element is not represented by its logical type but rather it is decomposed in its "lowest level" fields (r, g and b) and reported as separate signals.
+This suggests that more complex groups (i.e. nested groups section [8](#8-tydi-pixelconverter-extending-the-helloworldrgb-example) or other types) will be "flattened" in the same manner.
+Accordingly to the examples in sections 1-6, signals of logical streams (internally implemented as bundles) are not grouped and no abstraction is provided.
 Indeed, the actual detailed representation of streams is used in the waveforms.
-Moreover, streams with throupughts higher than 1 may lead to an explosion of number of separate signals in the waveforms, making inspection even more disorganized. With reference to the example, `stream2_type` as a throuput of 2 so the data bus is duplicated (2 groups of `Rgb` can be sent every clock cycle). This is translated internally as 2 bits of strobe and 6 parallel data buses without any grouped representation.
-Finally, both logical and physical stream implementations (`PhysicalStreamDetailed` and `PhysicalStream`) are displayed in the waveforms. Although no clear distinction between them is visible.
+Moreover, streams with throupughts higher than 1 may lead to an explosion of number of separate signals in the waveforms, making inspection even less organized.
+With reference to the example, `stream2_type` as a throuput of 2 so the data bus is duplicated (2 groups of `Rgb` can be sent every clock cycle).
+This internally leads to 2 bits of strobe and 6 parallel data buses without any grouping.
+Finally, both logical and physical stream implementations (`PhysicalStreamDetailed` and `PhysicalStream`) are displayed in the waveforms. 
+Unfortunately, no clear distinction between them is visible.
 
 | ![Tydi HelloWorldRgb in waveforms](./images/tydi_hello_world/hello_world_waves.png)                                          |
 | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -473,9 +496,12 @@ Finally, both logical and physical stream implementations (`PhysicalStreamDetail
 
 ### 7.2. Tydi HelloWorldRgb in HGDB
 
-The HGDB debugger still preserves the same issues addressed in the chisel examples. Thus, every chisel module is considered a generic Object, no information about the actual type and direction of the signals is provided (i.e. UInt, Vec, Bundle, Wire, Input, Output, etc...). However, the hierarchy of bundles and vecs can be still fully inspected.
+The HGDB debugger still preserves the same issues addressed in the chisel examples.
+Thus, every chisel module is considered a generic `Object`, no information about the actual type, direction and width of the signals is provided (i.e. UInt, Vec, Bundle, Wire, Input, Output, etc...).
+However, the hierarchy of bundles and vecs can be still fully inspected.
 
-Within the tydi context, none of the stream characteristics are available such as the throuput and complexity level of a tydi stream. As addressed in the waveform viewers, also here no distinction between logical and physical streams can be made (both are Object).
+Within the tydi context, none of the stream characteristics are available such as the throughput and complexity level of a tydi stream. 
+As addressed in the waveform viewers, also here no distinction between logical and physical streams can be made since they are both of Object type.
 
 | ![Tydi HelloWorldRgb in HGDB](./images/tydi_hello_world/hello_world_hgdb.png) |
 | ----------------------------------------------------------------------------- |
@@ -483,11 +509,13 @@ Within the tydi context, none of the stream characteristics are available such a
 
 ## 8. Tydi PixelConverter: extending the HelloWorldRgb example
 
-The `PixelConverter` extends the `HelloWorldRgb` example by implementing more complex data structures to represent a pixel.
-In particular, it implements a tydi union to define a color variant for a pixel and it makes use of templates to define its types.
+The `PixelConverter` extends the `HelloWorldRgb` example by implementing more complex data structures that represent a pixel.
+In particular, it implements a tydi `union` to define a color variant for a pixel and it makes use of templates to define its types.
 It also uses nested groups to define the pixel type.
 
-As it can be seen from the code snippet below, tydi-lang facilitates to declare complex types in a structured and concise format. Templates enhance the abstraction level, allowing to define a type once and use it in multiple places with different characteristics. For example, the `Float` type can be used to define different custom floating point types with different mantissa and exponent sizes.
+As it can be seen from the code snippet below, tydi-lang facilitates to declare complex types in a structured and concise format.
+Tydi templates enhance the abstraction level, allowing to define a type once and use it in multiple places with different characteristics.
+For example, the `Float` type can be used to define different custom floating point types with different mantissa and exponent sizes.
 
 ```cpp
 // ....
@@ -523,9 +551,13 @@ Group Pixel {
 
 ### 8.1. Tydi PixelConverter in waveforms
 
-As expected from the previous examples, the nested groups defining a pixel are flattened into their lowest level fields as shown in fig. 20. This example introduces also the use of unions which can be used to define a variant type, in this example the color variant of a pixel. From the waveform it is difficult to understand what variant is currently selected. In order to do that, the user must manually understand the association between the tag field value and the union variants. It is clear to see that this can not be a trivial task for large unions.
+As expected from the previous examples, the nested groups that define a pixel are flattened, in waveform viewers, into their lowest level fields as shown in fig. 20.
+This example also introduces the usage of unions which can define a variant type: in this example the color variant of a pixel, either grayscale or rgb.
+It is difficult to understand what variant is currently selected by simply taking a look at the figure.
+Instead, the user must manually understand the association between the tag field value and the union variants.
+It is clear to see that this can not be a trivial task while dealing with large unions.
 
-A better representation of unions and nested groups is therefore needed to improve the readability of the waveforms.
+A better representation of unions and nested groups is therefore needed to improve readability.
 
 | ![Tydi PixelConverter in waveforms](./images/tydi_pixel_converter/pixel_converter_waves.png) |
 | -------------------------------------------------------------------------------------------- |
@@ -533,8 +565,8 @@ A better representation of unions and nested groups is therefore needed to impro
 
 ### 8.2. Tydi PixelConverter in HGDB
 
-Fig. 21 shows that also the hgdb debugger is not able to well represent the union variants type.
-This is however something expected since the tydi union is a logic type characterizing the tydi specification that does not have a direct chisel translated representation.
+Fig. 21 shows that also the hgdb debugger is not able to well represent the union variants.
+This is however something expected since the tydi union is a logic type of the tydi specification and it does not have a direct translation to chisel.
 
 | ![Tydi PixelConverter in HGDB](./images/tydi_pixel_converter/pixel_converter_hgdb.png) |
 | -------------------------------------------------------------------------------------- |
@@ -542,9 +574,10 @@ This is however something expected since the tydi union is a logic type characte
 
 ## 9. Tydi PipelineSimple: filter and aggregate some values
 
-This example implements a two stages pipeline that filters and aggregates some values.
+This example implements a two stages pipeline to filter and aggregate some input values.
 It uses two modules to perform the stages and a top module that instantiates the stages and connects their streams.
-This is also the first example that uses two types of streams, the top has indeed a `NumberGroup` stream as input and a `Stats` stream as output. Whereas all the previous examples used only streams sending the same type of data.
+This is also the first example that uses two different types of streams, the top has indeed a `NumberGroup` input stream and a `Stats` output stream.
+Whereas all the previous examples used only streams of the same data type.
 
 ```cpp
 // package pipelineSimple_types
@@ -590,8 +623,9 @@ impl PipelineSimple of PipelineSimple_interface {
 
 ### 9.1. Tydi PipelineSimple in waveforms
 
-Fig. 22 includes the output waveforms of a PipelineSimple testbench and highlights the logical streams.
-As depicted by the figure, there is no clear distinction between the two types of stream in the Reducer module. Although the difference is clearly visible from the tydi-lang code, the designer can retrieve that only from the signal names. 
+Fig. 22 includes the output waveforms of a PipelineSimple test bench and highlights the logical streams.
+As depicted by the figure, there is no clear distinction between the two types of stream in the Reducer module.
+Although the difference is clearly visible from the tydi-lang code, the designer can get it only from the signal names. 
 
 | ![Tydi PipelineSimple in waveforms](./images/tydi_pipeline_simple/pipeline_simple_waves.png) |
 | -------------------------------------------------------------------------------------------- |
@@ -636,7 +670,7 @@ It does not introduce any significant issues that were not already addressed in 
 The most complex tydi example is the `PipelineNestedStream` that extends the `PipelineNestedGroup` example with nested streams.
 Tydi logic groups can contain streams as fields, and therefore this allows to define nested streams that appear as simple named fields of the group at the logical level.
 
-PipelineNestedStream implements one example usage of nested streams: some fields associated to string of unknown lenght (stream of chars).
+PipelineNestedStream implements one example usage of nested streams: some fields associated to string of unknown length (a stream of chars).
 ```cpp
 // Define a char stream
 Char_t = Bit(8); // UInt<8>
@@ -664,8 +698,8 @@ Fig. 23 reports the waveforms for the aforementioned example.
 The figure highlights the structure of the `NumberGroupWithString` streams.
 In the waveform representation a nested (child) stream is shown as a separate stream, that is independent from the parent stream.
 Despite nested streams are internally implemented as separate signals, due to the limitations of the low level HDLs, tydi-lang provides a logical hierarchical representation of parent and child streams.
-Current trace files do not support this logic level representation, and the association is hidden in the signal names only, making it difficult to understand streams relationships.
-With more complex circuits this issue mae become even more relevant.
+Current trace files do not support this logic level representation, and the association is hidden in the signal names only, making it difficult to understand relationships between streams.
+With more complex circuits this issue may become even more relevant.
 A new, higher level representation may improve readability and reduce debugging effort.
 
 | ![Tydi PipelineNestedStream in waveforms](./images/tydi_pipeline_nested_stream/pipeline_nested_stream_waves.png) |
@@ -680,6 +714,84 @@ However, it still has the same issues already addressed in the previous examples
 | ![Tydi PipelineNestedStream in HGDB](./images/tydi_pipeline_nested_stream/pipeline_nested_stream_hgdb.png)                                                                                                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Fig. 24 - *Tydi PipelineNestedStream preserves the hierarchical structure of nested streams in HGDB. Nested NumberGroup (numberNested, blue) and nested Char_stream (my_custom_string, green) are childs "variables" of NumberGroupWithSting (inStream, red).* |
+
+
+# Summary
+## Chisel elements
+- `Bundle`: group together several **named** fields of potentially different types into a coherent unit.
+  - Waveforms:
+    - Not grouped in the waveforms. Signals are shown separately and not as named field of the parent bundle.
+    - Shown as `bundleName_signalName` (ideally, `signalName` should a child of `bundleName` but it is not the case in the waveforms).
+    - No respective logic in verilog/vhdl.
+  - HGDB:
+    - The structure of the bundle (hierarchy and named fields) is preserved.
+    - The type is associated to `Object` instead of `Bundle`.
+    - No reference to basic types (UInt, SInt, Bool, etc...) as well as width, reg, wire, input, output.
+- `Vec`: an indexable vector of elements.
+  - Waveforms:
+    - Not shown as indexed elements. Displayed as separate parallel signals.
+    - Shown as `vecName_index`.
+    - Similar to a bit vector but more powerful since it can also have different sizes than a bit
+  - HGDB:
+    - The structure of the vec is preserved. The hierarchy and indexed elements are shown.
+    - The type is associated to `Array` instead of `Vec`.
+    - Overcomplicated representation of the vec. 
+- Scala array of modules: used to instantiate multiple modules of the same type.
+  - Waveforms:
+    - Instantiated as `moduleName_index`.
+    - Modules are not grouped as part of an array
+  - HGDB:
+    - No access to signals of child modules from a breakpoint in a parent module. Only hierarchy of vec and bundle can be inspected.
+- ChiselEnum or Enum: reduce the chance of error when encoding mux selectors, opcodes, and functional unit operations.
+  - Waveforms:
+    - No information about the enum variants (i.e. `sNone`).
+    - Some backends generate additional wires (i.e. `_GEN_2`) that are used internally.
+  - HGDB:
+  - No information about the state names (i.e. `sNone`).
+  - Some times some temp nodes in the symbol table cause crashes.
+- Functionality: assign values to wires through functions, val, object and class.
+  - No distinction between the 5 type assignments in bboth waveforms and HGDB.
+- `Memories`:
+  - Waveforms:
+    - The whole memory content cannot be inspected if the Treadle backend is used. Treadle only dumps reading and writing ports in the VCD.
+    - Verilator allows to inspect the whole content of a memory block, although, values are not grouped together by default.
+  - HGDB:
+    - No information about the entire memory content.
+    - Only input/output ports can be inspected.
+- Router: using chisel "typed" abstraction to represent circtuit components and characteristics.
+  - No information about the parameters used to define the router.
+  - No information about class types (i.e. Packet, ReadCmd, WriteCmd) and basic types (i.e. UInt, SInt, Bool, etc...).
+
+## Tydi elements
+There is no information about tydi types and streams in both waveforms and HGDB.
+Both basic (Null, Bits, Group, Union and Stream) and custom types (implementations of basic types) are not shown in the waveforms and in HGDB.
+- `Bits`: a bit type with a specific width. 
+  - Implemented inn Tydi-Chisel as an extention of basic types (UInt, SInt, Bool).
+  - Same issues related to basic types in chisel.
+- `Group`: a composite type (like a struct) that contains a set of fields of potentially different types.
+  - Similar to chisel bundles.
+  - No information about the fields of the group.
+- `Union`: a variant type that can contain one of several different types.
+  - Similar to a chisel bundle/enum with a tag associated to the selected variant.
+  - No information about the union variants.
+- `Stream`: a stream of elements of a specific type.
+  - No information about the stream type and its characteristics.
+- Tydi emplates:
+  - No reference to templates.
+- Nested groups and streams:
+  - Hierarchy is not preserved in the waveforms. It is difficult to understand that a stream is nested in another stream.
+  - HGDB preserves the hierarchy in both cases.
+
+## Other findings
+- Naming convention issue in waveforms:
+  - some names (allowed in chisel) may cause overlaps in the waveforms
+  - for example a bundle `X` with a field `A` and a signal named `X_A` would have the same name in waveforms but if instantiated in the same logic block, their names are not sure
+  - this naming convention issue affects both "conflicting" signals, "conflicting" modules and "conflicting" modules with signals.
+- No issue associated to the naming convention in HGDB.
+- No distinction between registers and wires in some backends.
+- No reference to intermediate internal `val` of a module in HGDB and often in waveforms.
+- Icarus verilog test (generated using chiseltest) crashes after the 2nd simulation clock cycle.
+- HGDB does not provide distinction between reg, wires, input, output, etc..., basic types (UInt, SInt, Bool, etc...) and signal width.
 
 # References
 [^1]: *Bundles and Vecs* | *Chisel*. en. [![bundles-vec-chisel](https://img.shields.io/badge/Web_Page-Bundles_and_Vecs_Chisel-blue)](https://www.chisel-lang.org/docs/explanations/bundles-and-vecs)
