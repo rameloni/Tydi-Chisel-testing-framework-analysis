@@ -1,5 +1,5 @@
 # # Install the tydi-lang-2-chisel transpiler
-TRANSPILER=tydi-transpiler
+TRANSPILER=tydi-lang-2-chisel
 
 TRANSPILER_SRC_LINK="https://github.com/ccromjongh/tydi-lang-2-chisel.git"
 TRANSPILER_SRC_NAME="tydi-lang-2-chisel"
@@ -30,10 +30,16 @@ json:
 > @mkdir -p $(THIS_DIR)$(BUILD_DIR)
 > @cd $(SRC) && $(CC) -c $(CONFIG_TOML) -o $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME) > /dev/null
 
+# Transpile the json IR to chisel boilerplate code
 json2chisel: json
+# Copy the 
 > @cp $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME)/json_IR.json $(TRANSPILER)/json_output.json
-> @cd $(TRANSPILER) && python3.9 $(TRANSPILER).py > /dev/null && rm json_output.json
-> @mv $(TRANSPILER)/output.scala $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME)/$(PROJ_NAME).scala
+# Executes the transpiler
+# transpiler.py output_dir [input ...]
+### > @cd $(TRANSPILER) && python3.9 $(TRANSPILER).py > /dev/null && rm json_output.json
+### > @mv $(TRANSPILER)/output.scala $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME)/$(PROJ_NAME).scala
+> @cd $(TRANSPILER) && python3.10 $(TRANSPILER).py $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME) json_output.json > /dev/null && rm json_output.json
+> @cd  $(THIS_DIR)$(BUILD_DIR)/$(PROJ_NAME) && mv json_output.scala $(PROJ_NAME).scala
 
 else
 
@@ -48,7 +54,7 @@ compile-transpiler:
 	@rm -rf $(TRANSPILER)
 	@mkdir -p $(TRANSPILER)
 	@cd $(TRANSPILER) && git clone $(TRANSPILER_SRC_LINK)
-	@cd $(TRANSPILER) && cp -r $(TRANSPILER_SRC_NAME)/templates . && cp $(TRANSPILER_SRC_NAME)/main.py $(TRANSPILER).py
+	@cd $(TRANSPILER) && cp -r $(TRANSPILER_SRC_NAME)/templates . && cp $(TRANSPILER_SRC_NAME)/tydi-lang-2-chisel.py $(TRANSPILER).py
 	@rm -rf $(TRANSPILER)/$(TRANSPILER_SRC_NAME)
 
 clean-transpiler:
