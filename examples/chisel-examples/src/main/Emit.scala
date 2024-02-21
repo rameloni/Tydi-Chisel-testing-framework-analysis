@@ -1,7 +1,6 @@
 package chiselexamples
 
-import chisel3.{RawModule, emitVerilog}
-import chiselexamples.adder.Adder
+import chisel3.RawModule
 import circt.stage.ChiselStage
 
 protected class Emit[T <: RawModule](
@@ -23,7 +22,8 @@ protected class Emit[T <: RawModule](
     // emit Verilog
     ChiselStage.emitSystemVerilogFile(
       module(),
-      Array("--split-verilog", "--target-dir", outputDirVerilog)
+      Array("--split-verilog", "--target-dir", outputDirVerilog),
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }
 
