@@ -13,9 +13,29 @@ package chiselexamples
 package showenum
 
 import chisel3._
+import chisel3.experimental.EnumAnnotations.EnumDefAnnotation
+import chisel3.experimental.{ChiselAnnotation, annotate, requireIsHardware}
 import circt.stage.ChiselStage
 import chisel3.util._
+import firrtl.transforms.DontTouchAnnotation
 
+
+object mapEnum {
+
+  /** Mark a signal as an optimization barrier to Chisel and FIRRTL.
+   *
+   * @note Requires the argument to be bound to hardware
+   * @param data The signal to be marked
+   * @return Unmodified signal `data`
+   */
+  def apply[T <: ChiselEnum](data: T): T = {
+    //    requireIsHardware(data, "Data marked dontTouch")
+    annotate(new ChiselAnnotation {
+      def toFirrtl = EnumDefAnnotation(data.Type.toString, Map("a" -> 1, "b" -> 2))
+    })
+    data
+  }
+}
 /* ### How do I create a finite state machine?
  *
  * Use ChiselEnum to construct the states and switch & is to construct the FSM
@@ -24,14 +44,20 @@ import chisel3.util._
 
 class DetectTwoOnes extends Module {
   val io = IO(new Bundle {
-    val in = Input(Bool())
-    val out = Output(Bool())
+    val in      = Input(Bool())
+    val out     = Output(Bool())
     val inDebug = Output(Bool())
   })
+
+  val bo = Wire(Bool())
+  bo := io.in
+  dontTouch(bo)
 
   object State extends ChiselEnum {
     val sNone, sOne1, sTwo1s = Value
   }
+
+  mapEnum(State)
 
   val state = RegInit(State.sNone)
 

@@ -6,24 +6,33 @@ import circt.stage.ChiselStage
 protected class Emit[T <: RawModule](
                                       val outputPath: String,
                                       // Function
-                                      val module: () => T,
+                                      val module:     () => T,
                                       val moduleName: String
                                     ) {
 
   private val outputDirVerilog = outputPath + "/verilog"
-  private val outputDirFirrtl = outputPath + "/firrtl"
-  private val outputDirHGDB = outputPath + "/hgdb"
+  private val outputDirFirrtl  = outputPath + "/firrtl"
+  private val outputDirHGDB    = outputPath + "/hgdb"
 
   private val nameFirrtl = moduleName + ".fir"
-  private val nameToml = moduleName + ".toml"
-  private val nameDB = moduleName + ".db"
+  private val nameToml   = moduleName + ".toml"
+  private val nameDB     = moduleName + ".db"
 
   def verilog(): Unit = {
     // emit Verilog
     ChiselStage.emitSystemVerilogFile(
       module(),
       Array("--split-verilog", "--target-dir", outputDirVerilog),
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
+      firtoolOpts = Array("-disable-all-randomization")
+    )
+  }
+
+  def debug(): Unit  = {
+    // emit Verilog with debug options
+    ChiselStage.emitSystemVerilogFile(
+      module (),
+      Array("--split-verilog", "--target-dir", outputDirVerilog),
+      firtoolOpts = Array("-g")
     )
   }
 
@@ -31,7 +40,7 @@ protected class Emit[T <: RawModule](
     val firrtl = ChiselStage.emitCHIRRTL(
       module()
     )
-    val dir = new java.io.File(outputDirFirrtl)
+    val dir    = new java.io.File(outputDirFirrtl)
     if (!dir.exists())
       dir.mkdirs()
 
@@ -65,7 +74,7 @@ protected class Emit[T <: RawModule](
 object Emit {
   def apply(
              outputPath: String,
-             module: () => RawModule,
+             module:     () => RawModule,
              moduleName: String
            ): Emit[RawModule] = {
     new Emit[RawModule](

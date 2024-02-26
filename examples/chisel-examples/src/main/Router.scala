@@ -42,10 +42,10 @@ import chisel3.util.{DecoupledIO, DeqIO, EnqIO, log2Ceil}
 import circt.stage.ChiselStage
 
 object Router {
-  val addressWidth = 32
-  val dataWidth = 64
-  val headerWidth = 8
-  val routeTableSize = 16
+  val addressWidth    = 32
+  val dataWidth       = 64
+  val headerWidth     = 8
+  val routeTableSize  = 16
   val numberOfOutputs = 4
 }
 
@@ -60,12 +60,12 @@ class WriteCmd extends ReadCmd {
 
 class Packet extends Bundle {
   val header: UInt = UInt(Router.headerWidth.W)
-  val body: UInt = UInt(Router.dataWidth.W)
+  val body  : UInt = UInt(Router.dataWidth.W)
 }
 
 class AnotherPacket extends Bundle {
   val header = UInt(Router.headerWidth.W)
-  val body = UInt(Router.dataWidth.W)
+  val body   = UInt(Router.dataWidth.W)
 }
 
 /** The router circuit IO It routes a packet placed on its single input port to
@@ -76,11 +76,11 @@ class AnotherPacket extends Bundle {
  */
 class RouterIO(val n: Int) extends Bundle {
 
-  val read_routing_table_request: DecoupledIO[ReadCmd] = DeqIO(new ReadCmd())
-  val read_routing_table_response: DecoupledIO[UInt] = EnqIO(UInt(Router.addressWidth.W))
-  val load_routing_table_request: DecoupledIO[WriteCmd] = DeqIO(new WriteCmd())
+  val read_routing_table_request : DecoupledIO[ReadCmd]  = DeqIO(new ReadCmd())
+  val read_routing_table_response: DecoupledIO[UInt]     = EnqIO(UInt(Router.addressWidth.W))
+  val load_routing_table_request : DecoupledIO[WriteCmd] = DeqIO(new WriteCmd())
 
-  val in: DecoupledIO[Packet] = DeqIO(new Packet())
+  val in  : DecoupledIO[Packet]      = DeqIO(new Packet())
   val outs: Vec[DecoupledIO[Packet]] = Vec(n, EnqIO(new Packet()))
 
   //  val anotherOut = Vec(n, EnqIO(new AnotherPacket()))
@@ -91,9 +91,9 @@ class RouterIO(val n: Int) extends Bundle {
  * match the number of outputs
  */
 class Router extends Module {
-  val depth: Int = Router.routeTableSize
-  val n: Int = Router.numberOfOutputs
-  val io: RouterIO = IO(new RouterIO(n))
+  val depth: Int       = Router.routeTableSize
+  val n    : Int       = Router.numberOfOutputs
+  val io   : RouterIO  = IO(new RouterIO(n))
   val table: Mem[UInt] = Mem(depth, UInt(BigInt(n).bitLength.W))
 
   // These ensure all output signals are driven.
@@ -120,30 +120,30 @@ class Router extends Module {
     .elsewhen(io.load_routing_table_request.valid) {
       val cmd = io.load_routing_table_request.deq()
       table(cmd.addr) := cmd.data
-//      printf("setting tbl(%d) to %d\n", cmd.addr, cmd.data)
+      //      printf("setting tbl(%d) to %d\n", cmd.addr, cmd.data)
     }
     .elsewhen(io.in.valid) {
       val packet: Packet = io.in.bits
-      val idx: UInt = table(packet.header(log2Ceil(Router.routeTableSize), 0))
+      val idx   : UInt   = table(packet.header(log2Ceil(Router.routeTableSize), 0))
       when(io.outs(idx).ready) {
         io.in.deq()
         io.outs(idx).enq(packet)
-//        printf(
-//          "got packet to route header %d, data %d, being routed to out(%d)\n",
-//          packet.header,
-//          packet.body,
-//          table(packet.header)
-//        )
+        //        printf(
+        //          "got packet to route header %d, data %d, being routed to out(%d)\n",
+        //          packet.header,
+        //          packet.body,
+        //          table(packet.header)
+        //        )
 
-//        // Print the table
-//        printf("table: [")
-//        for (i <- 0 until table.length.toInt)
-//          printf(cf"${table(i.U)}, ")
-//        printf("]\n")
-//        printf("idx:   [")
-//        for (i <- 0 until table.length.toInt)
-//          printf(cf"${i.U}, ")
-//        printf("]\n")
+        //        // Print the table
+        //        printf("table: [")
+        //        for (i <- 0 until table.length.toInt)
+        //          printf(cf"${table(i.U)}, ")
+        //        printf("]\n")
+        //        printf("idx:   [")
+        //        for (i <- 0 until table.length.toInt)
+        //          printf(cf"${i.U}, ")
+        //        printf("]\n")
       }
     }
 

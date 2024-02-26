@@ -10,21 +10,22 @@ import scala.reflect.ClassTag
 object ExposeBundle {
   def apply[T <: Bundle](bundle: => T, i: Int): T = {
 
-	val out = IO(Output(bundle.cloneType))
-	out.suggestName(bundle.parentModName + bundle.instanceName + "_" + i)
-	out.getElements.zip(bundle.getElements).foreach { case (out, in) =>
-	  out := expose(in)
-	}
-	out
+    val out = IO(Output(bundle.cloneType)) // expose the current bundle
+    out.suggestName(bundle.parentModName + bundle.instanceName + "_" + i) // update the name to avoid issues
+    // Connect the bundle element with the new exposed
+    out.getElements.zip(bundle.getElements).foreach { case (out, in) =>
+      out := expose(in)
+    }
+    out
   }
 
   def fromArray[T <: Bundle : ClassTag](
-										 in: Array[T],
-										 startIndex: Int = 0
-									   ): Array[T] = {
-	//	val rangenum = startIndex until in.length + startIndex
-	//	in.zip(rangenum).map { case (elem, index) => apply(elem, index) }
-	in.map(apply(_, startIndex))
+                                         in: Array[T],
+                                         startIndex: Int = 0
+                                       ): Array[T] = {
+    //	val rangenum = startIndex until in.length + startIndex
+    //	in.zip(rangenum).map { case (elem, index) => apply(elem, index) }
+    in.map(apply(_, startIndex))
   }
 
 }

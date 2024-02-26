@@ -8,9 +8,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 
 // Test: x & y | ~x & y
-class FunctionalityTester(dut: Functionality,
+class FunctionalityTester(dut:          Functionality,
                           var stepIncr: Int = 1,
-                          print: Boolean = false
+                          print:        Boolean = false
                          ) extends PeekPokeTester(dut) {
   if (stepIncr < 1)
     stepIncr = 1

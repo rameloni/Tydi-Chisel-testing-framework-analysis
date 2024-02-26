@@ -37,11 +37,11 @@ class Functionality extends Module {
     val x = Input(UInt(16.W))
     val y = Input(UInt(16.W))
 
-    val z_boolean = Output(UInt(16.W))
+    val z_boolean  = Output(UInt(16.W))
     val z_function = Output(UInt(16.W))
-    val z_val = Output(UInt(16.W))
-    val z_object = Output(UInt(16.W))
-    val z_class = Output(UInt(16.W))
+    val z_val      = Output(UInt(16.W))
+    val z_object   = Output(UInt(16.W))
+    val z_class    = Output(UInt(16.W))
   })
 
   // This is the equivalent boolean logic of the clb function

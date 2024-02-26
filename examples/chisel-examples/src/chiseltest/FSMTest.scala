@@ -10,7 +10,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class DetectTwoOnesTester(c: DetectTwoOnes) extends PeekPokeTester(c) {
 
   // Inputs and expected results
-  val inputs = Seq(0, 0, 1, 0, 1, 1, 0, 1, 1, 1)
+  val inputs   = Seq(0, 0, 1, 0, 1, 1, 0, 1, 1, 1)
   val expected = Seq(0, 0, 0, 0, 0, 1, 0, 0, 1, 1)
 
   // Reset
@@ -30,7 +30,7 @@ class DetectTwoOnesTester(c: DetectTwoOnes) extends PeekPokeTester(c) {
 class DetectTwoOnesTesterWrapper(c: DetectTwoOnesWrapper) extends PeekPokeTester(c) {
 
   // Inputs and expected results
-  val inputs = Seq(0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0)
+  val inputs   = Seq(0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0)
   val expected = Seq(0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0)
 
   // Reset

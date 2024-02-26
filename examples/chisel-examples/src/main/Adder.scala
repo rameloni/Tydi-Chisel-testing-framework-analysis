@@ -1,15 +1,16 @@
 // See LICENSE.txt for license details.
 /**
- * Code from: https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples
+ * Code from:
+ * https://github.com/ucb-bar/chisel-tutorial/tree/release/src/main/scala/examples
  *
- * Modified by: rameloni
- * The changes are:
- *  - Add a print parameter to the Adder class
+ * Modified by: rameloni The changes are:
+ *   - Add a print parameter to the Adder class
  *
- * This example implement an n-bit adder.
- * It aims to show how an array of components that leads to a very simple and concise implementation
- * in chisel, also leads to a more complex implementation in verilog and in waveforms viewers.
- * So it shoes how the abstraction level of is lost when debugging with current waveform viewers.
+ * This example implement an n-bit adder. It aims to show how an array of
+ * components that leads to a very simple and concise implementation in chisel,
+ * also leads to a more complex implementation in verilog and in waveforms
+ * viewers. So it shoes how the abstraction level of is lost when debugging with
+ * current waveform viewers.
  *
  * Moreover, it shows how chiseltest supports printf debugging.
  */
@@ -30,11 +31,11 @@ import circt.stage.ChiselStage
 class Adder(val n: Int, val print: Boolean = false) extends Module {
   // IO interface
   val io = IO(new Bundle {
-    val A = Input(UInt(n.W))
-    val B = Input(UInt(n.W))
+    val A   = Input(UInt(n.W))
+    val B   = Input(UInt(n.W))
     val Cin = Input(UInt(1.W))
 
-    val Sum = Output(UInt(n.W))
+    val Sum  = Output(UInt(n.W))
     val Cout = Output(Bool())
   })
 
@@ -50,19 +51,19 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
   //  i.e., we don't need to dynamically index into the data structure at run-time,
   //  we use an Array instead of a Vec.
   // Internal logic
-  val FAs = Array.fill(n)(Module(new FullAdder()))
+  val FAs       = Array.fill(n)(Module(new FullAdder()))
   val FullAdder = Wire(UInt(1.W))
   dontTouch(FullAdder)
 
   val FullAdder_5 = Module(new FullAdder())
-  val carry = Wire(Vec(n + 1, UInt(1.W)))
-  val sum = Wire(Vec(n, Bool()))
-  val sum_2 = Wire(Vec(n, UInt(1.W)))
+  val carry       = Wire(Vec(n + 1, UInt(1.W)))
+  val sum         = Wire(Vec(n, Bool()))
+  val sum_2       = Wire(Vec(n, UInt(1.W)))
   dontTouch(sum_2)
 
-  FullAdder := 1.U
-  FullAdder_5.io.a := 1.U
-  FullAdder_5.io.b := 3.U
+  FullAdder          := 1.U
+  FullAdder_5.io.a   := 1.U
+  FullAdder_5.io.b   := 3.U
   FullAdder_5.io.cin := io.Cout && sum(1).asBool
 
   // first carry is the top level carry in
@@ -70,15 +71,15 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
 
   // wire up the ports of the full adders
   for (i <- 0 until n) {
-    FAs(i).io.a := io.A(i)
-    FAs(i).io.b := io.B(i)
+    FAs(i).io.a   := io.A(i)
+    FAs(i).io.b   := io.B(i)
     FAs(i).io.cin := carry(i)
-    carry(i + 1) := FAs(i).io.cout
-    sum(i) := FAs(i).io.sum.asBool
-    sum_2(i) := sum(i)
+    carry(i + 1)  := FAs(i).io.cout
+    sum(i)        := FAs(i).io.sum.asBool
+    sum_2(i)      := sum(i)
   }
 
-  io.Sum := sum.asUInt
+  io.Sum  := sum.asUInt
   io.Cout := carry(n)
 
   // For debugging purposes
@@ -89,20 +90,27 @@ class Adder(val n: Int, val print: Boolean = false) extends Module {
   }
 }
 
-
 object AdderVerilog extends App {
   Emit(
     "output/adder",
     () => new Adder(5, true),
-    "Adder"
+    "Adder",
   ).verilog()
+}
+
+object AdderDebugVerilog extends App {
+  Emit(
+    "output/Adder",
+    () => new Adder(5, true),
+    "AdderDebug",
+  ).debug()
 }
 
 object AdderFIRRTL extends App {
   Emit(
     "output/adder",
     () => new Adder(5, true),
-    "Adder"
+    "Adder",
   ).firrtl()
 }
 
@@ -110,6 +118,6 @@ object AdderGenerateHGDB extends App {
   Emit(
     "output/adder",
     () => new Adder(5, true),
-    "Adder"
+    "Adder",
   ).hgdbOutputs()
 }
