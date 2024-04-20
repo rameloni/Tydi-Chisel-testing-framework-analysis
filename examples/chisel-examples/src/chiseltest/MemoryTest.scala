@@ -5,13 +5,14 @@ import chisel3._
 import chiseltest._
 import chiseltest.iotesters.PeekPokeTester
 import org.scalatest.flatspec.AnyFlatSpec
+import treadle2.MemoryToVCD
 
 
 class MemoryTester(c: Memory, packetToSend: Int = 1) extends PeekPokeTester(c) {
 
   // Write some data to the memory
-  var i = 0
-  var readAddr = 0
+  var i         = 0
+  var readAddr  = 0
   var writeAddr = 0
 
   // Simply read and write some data
@@ -38,12 +39,18 @@ class MemoryWaveformTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "MemoryWaveformTest"
 
   val packetToSend = 10
-  val n = 16
-  val width = 32
+  val n            = 16
+  val width        = 32
 
   it should "dump Treadle VCD" in {
     test(new Memory(n, width))
       .withAnnotations(Seq(WriteVcdAnnotation, TreadleBackendAnnotation))
+      .runPeekPoke(new MemoryTester(_))
+  }
+
+  it should "dump Treadle VCD with MemoryToVCD" in {
+    test(new Memory(n, width))
+      .withAnnotations(Seq(MemoryToVCD("mem:all"), WriteVcdAnnotation, TreadleBackendAnnotation))
       .runPeekPoke(new MemoryTester(_))
   }
 

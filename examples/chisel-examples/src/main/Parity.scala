@@ -21,12 +21,12 @@ import circt.stage.ChiselStage
 // Check if the sequence of input 1's is even or odd
 class Parity extends Module {
   val io = IO(new Bundle {
-    val in = Input(Bool())
+    val in  = Input(Bool())
     val out = Output(Bool())
   })
 
   val s_even :: s_odd :: Nil = Enum(2)
-  val state = RegInit(s_even)
+  val state                  = RegInit(s_even)
 
   // State logic
   when(io.in) {

@@ -350,6 +350,10 @@ In order to understand why the two backends produce different results, I inspect
 Treadle simulates a FIRRTL code while Verilator uses a Verilog representation.
 The Verilog code contains a memory declaration (like `reg [3:0] table_ [0:15]`), while the emitted FIRRTL code only declares the pipeline ports signals.
 
+*Update:* The `MemoryToVcd(specifier: String)` allows to dump whole memory content or specific subsections of that also from treadle.
+However, it is not displayed with a good formatting.
+Its visualization is similar to the one provided in fig. 13.2.
+
 > **Note:** The memory example will be extended in the near future in order to include all memories presented in the chisel explanation page[^5].
 
 ### 5.2. Memory in HGDB
@@ -755,6 +759,7 @@ However, it still has the same issues already addressed in the previous examples
   - Waveforms:
     - The whole memory content cannot be inspected if the Treadle backend is used. Treadle only dumps reading and writing ports in the VCD.
     - Verilator allows to inspect the whole content of a memory block, although, values are not grouped together by default.
+    - *Update*: The `MemoryToVcd` annotation allows to print the whole memory content with treadle, like verilator. 
   - HGDB:
     - No information about the entire memory content.
     - Only input/output ports can be inspected.

@@ -16,10 +16,10 @@ class Memory(val n: Int, val width: Int) extends Module {
   val addrSize = log2Ceil(n)
 
   // Define the IO
-  val io = IO(new Bundle {
+  val io             = IO(new Bundle {
     val writeEn = Input(Bool())
-    val addrIn = Input(UInt(addrSize.W))
-    val dataIn = Input(UInt(width.W))
+    val addrIn  = Input(UInt(addrSize.W))
+    val dataIn  = Input(UInt(width.W))
     val dataOut = Output(UInt(width.W))
   })
   // The internal memory

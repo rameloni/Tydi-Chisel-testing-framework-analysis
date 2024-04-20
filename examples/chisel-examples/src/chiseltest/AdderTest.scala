@@ -13,7 +13,7 @@ import sys.process._
 class SwAdder(n: Int) {
   def apply(a: Int, b: Int, cin: Boolean): (Int, Boolean) = {
 
-    val sum = a + b + (if (cin) 1 else 0)
+    val sum  = a + b + (if (cin) 1 else 0)
     val mask = (1 << n) - 1
     // Return the sum and the carry out
     (sum & mask, ((sum >> n) & 1) == 1)
@@ -51,12 +51,12 @@ class AdderTester(dut: Adder, stepsFor: Int = 1, printDebug: Boolean = false) ex
         // Advance the clock
         step(1)
 
-        val copyOfDUT = dut
-        val peekedSum = peek(dut.io.Sum)
+        val copyOfDUT  = dut
+        val peekedSum  = peek(dut.io.Sum)
         val peekedCout = peek(dut.io.Cout)
-        val peekedA = peek(dut.io.A)
-        val peekedB = peek(dut.io.B)
-        val peekedCin = peek(dut.io.Cin)
+        val peekedA    = peek(dut.io.A)
+        val peekedB    = peek(dut.io.B)
+        val peekedCin  = peek(dut.io.Cin)
 
         // Compute the reference sum and carry
         val (sum, cout) = (new SwAdder(dut.n))(a, b, cin == 1)
@@ -171,8 +171,8 @@ class AdderExposeTest extends AnyFlatSpec with ChiselScalatestTester {
 class AdderWaveformTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "AdderWaveformTest"
 
-  val n = 5
-  val print = false
+  val n        = 5
+  val print    = false
   val stepsFor = 3
 
   it should "dump Treadle VCD" in {
